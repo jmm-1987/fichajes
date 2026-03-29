@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block titulo %}Corregir fichaje{% endblock %}
+{% block contenido %}
+<div class="container py-3" style="max-width:640px">
+  <h1 class="h4 text-azul-oscuro mb-3">Corregir registro #{{ registro.id }}</h1>
+  <form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+      {{ formulario.hidden_tag() }}
+      <div class="mb-3">{{ formulario.fecha_hora_servidor.label(class="form-label") }}{{ formulario.fecha_hora_servidor(class="form-control") }}</div>
+      <div class="mb-3">{{ formulario.tipo_registro.label(class="form-label") }}{{ formulario.tipo_registro(class="form-select") }}</div>
+      <div class="mb-3">{{ formulario.notas.label(class="form-label") }}{{ formulario.notas(class="form-control") }}</div>
+      <div class="mb-3">{{ formulario.motivo.label(class="form-label") }}{{ formulario.motivo(class="form-control", rows=3) }}</div>
+      {{ formulario.enviar(class="btn btn-acento") }}
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block titulo %}Historial{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h4 text-azul-oscuro mt-3 mb-3">Historial reciente</h1>
+  <div class="list-group shadow-sm">
+    {% for r in registros %}
+    <div class="list-group-item">
+      <div class="d-flex justify-content-between">
+        <strong>{{ r.tipo_registro }}</strong>
+        <span class="small text-muted">{{ r.fecha_hora_servidor|fecha_hora_es }}</span>
+      </div>
+      {% if r.texto_ubicacion %}<p class="small mb-0 text-secondary">{{ r.texto_ubicacion }}</p>{% endif %}
+    </div>
+    {% else %}
+    <div class="list-group-item">Sin registros</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

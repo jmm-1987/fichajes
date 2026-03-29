@@ -1,0 +1,12 @@
+{# macro opcional: {% from 'componentes/_tarjeta_estadistica.html' import tarjeta %} #}
+{% macro tarjeta(titulo, valor, subtitulo='') %}
+<div class="col-md-6 col-xl-3">
+  <div class="card tarjeta-estadistica h-100 border-0 shadow-sm">
+    <div class="card-body">
+      <p class="text-muted small mb-1">{{ titulo }}</p>
+      <p class="display-6 mb-0 text-azul-oscuro">{{ valor }}</p>
+      {% if subtitulo %}<p class="small text-secondary mt-2 mb-0">{{ subtitulo }}</p>{% endif %}
+    </div>
+  </div>
+</div>
+{% endmacro %}

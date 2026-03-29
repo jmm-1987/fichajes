@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block titulo %}Vacaciones administración{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h4 text-azul-oscuro mt-3 mb-3">Vacaciones (RRHH)</h1>
+  <h2 class="h6">Alta manual aprobada</h2>
+  <form method="post" class="card border-0 shadow-sm mb-4" style="max-width:560px">
+    <div class="card-body">
+      {{ form_manual.hidden_tag() }}
+      <div class="mb-2">{{ form_manual.empleado_id.label(class="form-label") }}{{ form_manual.empleado_id(class="form-select") }}</div>
+      <div class="row g-2">
+        <div class="col-md-6">{{ form_manual.fecha_inicio.label(class="form-label") }}{{ form_manual.fecha_inicio(class="form-control") }}</div>
+        <div class="col-md-6">{{ form_manual.fecha_fin.label(class="form-label") }}{{ form_manual.fecha_fin(class="form-control") }}</div>
+      </div>
+      <div class="mt-2">{{ form_manual.notas.label(class="form-label") }}{{ form_manual.notas(class="form-control") }}</div>
+      {{ form_manual.enviar(class="btn btn-acento mt-3") }}
+    </div>
+  </form>
+  <h2 class="h6">Pendientes</h2>
+  <div class="table-responsive">
+    <table class="table table-sm"><thead><tr><th>Empleado</th><th>Fechas</th><th></th></tr></thead>
+      <tbody>
+        {% for s in pendientes %}
+        <tr>
+          <td>{{ s.empleado.nombre_completo }}</td>
+          <td>{{ s.fecha_inicio|fecha_es }} — {{ s.fecha_fin|fecha_es }}</td>
+          <td><a href="{{ url_for('vacaciones_bp.resolver', solicitud_id=s.id) }}">Resolver</a></td>
+        </tr>
+        {% else %}<tr><td colspan="3">Ninguna</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

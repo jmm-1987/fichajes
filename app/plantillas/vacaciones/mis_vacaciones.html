@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block titulo %}Mis vacaciones{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h4 text-azul-oscuro mt-3 mb-3">Mis vacaciones</h1>
+  <form method="post" class="card border-0 shadow-sm mb-4" style="max-width:520px">
+    <div class="card-body">
+      {{ formulario.hidden_tag() }}
+      <div class="row g-2">
+        <div class="col-md-6">{{ formulario.fecha_inicio.label(class="form-label") }}{{ formulario.fecha_inicio(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.fecha_fin.label(class="form-label") }}{{ formulario.fecha_fin(class="form-control") }}</div>
+        <div class="col-12">{{ formulario.notas.label(class="form-label") }}{{ formulario.notas(class="form-control") }}</div>
+      </div>
+      {{ formulario.enviar(class="btn btn-acento mt-3") }}
+    </div>
+  </form>
+  <h2 class="h6 text-secondary">Solicitudes</h2>
+  <ul class="list-group shadow-sm">
+    {% for s in solicitudes %}
+    <li class="list-group-item d-flex justify-content-between">
+      <span>{{ s.fecha_inicio|fecha_es }} → {{ s.fecha_fin|fecha_es }}</span>
+      <span class="badge bg-secondary">{{ s.estado }}</span>
+    </li>
+    {% else %}<li class="list-group-item">Ninguna</li>{% endfor %}
+  </ul>
+</div>
+{% endblock %}

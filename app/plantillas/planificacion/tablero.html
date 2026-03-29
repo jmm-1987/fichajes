@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block titulo %}Tablero planificación{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 mb-3">
+    <h1 class="h4 text-azul-oscuro mb-0">Semana del {{ plan.inicio_semana|fecha_es }}</h1>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('planificacion_bp.indice') }}">Volver</a>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <h2 class="h6">Duplicar semana</h2>
+      <form method="post" action="{{ url_for('planificacion_bp.duplicar', plan_id=plan.id) }}">
+        {{ form_dup.hidden_tag() }}
+        <div class="input-group input-group-sm">
+          {{ form_dup.nuevo_inicio(class="form-control") }}
+          {{ form_dup.enviar(class="btn btn-outline-primary") }}
+        </div>
+      </form>
+    </div>
+    <div class="col-md-6">
+      <h2 class="h6">Guardar como plantilla</h2>
+      <form method="post" action="{{ url_for('planificacion_bp.guardar_plantilla', plan_id=plan.id) }}">
+        {{ form_plant.hidden_tag() }}
+        <div class="input-group input-group-sm">
+          {{ form_plant.nombre(class="form-control", placeholder='Nombre plantilla') }}
+          {{ form_plant.enviar(class="btn btn-outline-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+  {% if plantillas %}
+  <h2 class="h6">Aplicar plantilla</h2>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    {% for tpl in plantillas %}
+    <form method="post" action="{{ url_for('planificacion_bp.aplicar_plantilla', plan_id=plan.id, plantilla_id=tpl.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-sm btn-outline-dark">{{ tpl.nombre }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <p class="small text-muted">Edite horarios por celda. Los empleados son arrastrables para recordar asignaciones (sin persistencia automática).</p>
+  <div class="row">
+    <div class="col-lg-3 mb-3 d-none d-xl-block">
+      <h3 class="h6">Empleados</h3>
+      <div id="lista-empleados-plan" class="d-flex flex-column gap-1">
+        {% for e in empleados %}
+        <div class="empleado-chip p-2 rounded border bg-white" draggable="true" data-empleado-id="{{ e.id }}">{{ e.nombre_completo }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="col-12 col-xl-9">
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm tabla-plan bg-white shadow-sm">
+          <thead><tr><th></th>{% for d in dias %}<th class="text-center small">{{ d }}</th>{% endfor %}</tr></thead>
+          <tbody>
+            {% for e in empleados %}
+            <tr>
+              <td class="small fw-semibold text-nowrap">{{ e.nombre_completo }}</td>
+              {% for dia in range(7) %}
+              {% set item = mapa_celdas.get((e.id, dia)) %}
+              <td class="celda-plan p-1 align-top">
+                <form method="post" class="form-celda-plan">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="empleado_id" value="{{ e.id }}">
+                  <input type="hidden" name="dia_semana" value="{{ dia }}">
+                  <input type="time" name="hora_inicio" class="form-control form-control-sm mb-1" value="{% if item and item.hora_inicio %}{{ item.hora_inicio.strftime('%H:%M') }}{% endif %}">
+                  <input type="time" name="hora_fin" class="form-control form-control-sm mb-1" value="{% if item and item.hora_fin %}{{ item.hora_fin.strftime('%H:%M') }}{% endif %}">
+                  <button type="submit" class="btn btn-sm btn-acento w-100">Guardar</button>
+                </form>
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts_extra %}
+<script src="{{ url_for('static', filename='js/planificacion.js') }}"></script>
+{% endblock %}

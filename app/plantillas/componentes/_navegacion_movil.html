@@ -1,0 +1,9 @@
+<nav class="nav-movil d-lg-none fixed-bottom border-top bg-white shadow-lg">
+  <div class="d-flex justify-content-around py-2">
+    <a class="text-center text-decoration-none text-azul-oscuro small" href="{{ url_for('inicio_bp.panel') }}">Inicio</a>
+    {% if current_user.empleado %}
+    <a class="text-center text-decoration-none text-azul-oscuro small fw-bold" href="{{ url_for('fichajes_bp.portal_empleado') }}">Fichar</a>
+    <a class="text-center text-decoration-none text-azul-oscuro small" href="{{ url_for('fichajes_bp.historial_empleado') }}">Historial</a>
+    {% endif %}
+  </div>
+</nav>

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block titulo %}Panel{% endblock %}
+{% block contenido %}
+{% from 'componentes/_tarjeta_estadistica.html' import tarjeta %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h3 text-azul-oscuro mt-3 mb-4">Panel</h1>
+
+  {% if es_admin_vista and datos_admin %}
+  <h2 class="h5 text-secondary mb-3">Administración</h2>
+  <div class="row g-3 mb-4">
+    {{ tarjeta('Empleados activos', datos_admin.empleados_activos) }}
+    {{ tarjeta('Fichajes hoy', datos_admin.fichajes_hoy) }}
+    {{ tarjeta('Jornadas incompletas hoy', datos_admin.jornadas_incompletas) }}
+    {{ tarjeta('Solicitudes corrección', datos_admin.incidencias_pendientes) }}
+    {{ tarjeta('Vacaciones por aprobar', datos_admin.vacaciones_pendientes) }}
+  </div>
+  <div class="d-flex flex-wrap gap-2 mb-5">
+    <a class="btn btn-outline-primary" href="{{ url_for('empleados_bp.listado') }}">Empleados</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('fichajes_bp.listado_admin') }}">Fichajes</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('informes_bp.indice') }}">Informes</a>
+    {% if current_user.rol in ['superadministrador','administrador_empresa'] %}
+    <a class="btn btn-outline-primary" href="{{ url_for('vacaciones_bp.listado_admin') }}">Vacaciones</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if datos_empleado %}
+  <h2 class="h5 text-secondary mb-3">Mi jornada</h2>
+  <div class="row g-3">
+    <div class="col-md-6 col-xl-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="small text-muted mb-1">Estado</p>
+          <p class="h4 mb-0">
+            {% if datos_empleado.dentro %}
+            <span class="badge bg-success">Dentro</span>
+            {% else %}
+            <span class="badge bg-secondary">Fuera</span>
+            {% endif %}
+          </p>
+          {% if datos_empleado.ultimo_fichaje %}
+          <p class="small mt-2 mb-0">Último: {{ datos_empleado.ultimo_fichaje.tipo_registro }} · {{ datos_empleado.ultimo_fichaje.fecha_hora_servidor|fecha_hora_es(false) }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-xl-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="small text-muted mb-1">Horas hoy</p>
+          <p class="display-6 text-azul-oscuro mb-0">{{ datos_empleado.horas_hoy }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-xl-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="small text-muted mb-1">Horas esta semana</p>
+          <p class="display-6 text-azul-oscuro mb-0">{{ datos_empleado.horas_semana }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-4 d-grid d-md-block gap-2">
+    <a class="btn btn-acento btn-lg px-5" href="{{ url_for('fichajes_bp.portal_empleado') }}">Ir a fichar</a>
+    <a class="btn btn-outline-dark" href="{{ url_for('fichajes_bp.solicitar_correccion') }}">Solicitar corrección</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

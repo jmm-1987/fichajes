@@ -1,0 +1,23 @@
+<nav class="nav flex-column gap-1 p-3">
+  <a class="nav-link" href="{{ url_for('inicio_bp.panel') }}">Panel</a>
+  {% if current_user.is_authenticated and current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
+  <a class="nav-link" href="{{ url_for('empleados_bp.listado') }}">Empleados</a>
+  <a class="nav-link" href="{{ url_for('fichajes_bp.listado_admin') }}">Fichajes</a>
+  <a class="nav-link" href="{{ url_for('informes_bp.indice') }}">Informes</a>
+  {% endif %}
+  {% if current_user.is_authenticated and current_user.rol in ['superadministrador','administrador_empresa'] %}
+  <a class="nav-link" href="{{ url_for('vacaciones_bp.listado_admin') }}">Vacaciones (admin)</a>
+  <a class="nav-link" href="{{ url_for('administracion_bp.configuracion_laboral') }}">Configuración laboral</a>
+  {% endif %}
+  {% if current_user.is_authenticated and current_user.empleado %}
+  <a class="nav-link" href="{{ url_for('fichajes_bp.portal_empleado') }}">Fichar</a>
+  <a class="nav-link" href="{{ url_for('fichajes_bp.historial_empleado') }}">Mi historial</a>
+  <a class="nav-link" href="{{ url_for('vacaciones_bp.mis_vacaciones') }}">Mis vacaciones</a>
+  <a class="nav-link" href="{{ url_for('empleados_bp.mi_ficha') }}">Mi ficha</a>
+  {% endif %}
+  {% if planificacion_habilitada is defined and planificacion_habilitada %}
+  {% if current_user.is_authenticated and current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
+  <a class="nav-link" href="{{ url_for('planificacion_bp.indice') }}">Planificación</a>
+  {% endif %}
+  {% endif %}
+</nav>

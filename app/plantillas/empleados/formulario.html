@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block contenido %}
+<div class="container py-3" style="max-width:720px">
+  <h1 class="h4 text-azul-oscuro mb-3">{{ titulo }}</h1>
+  <form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+      {{ formulario.hidden_tag() }}
+      <div class="row g-2">
+        <div class="col-md-6">{{ formulario.correo_electronico.label(class="form-label") }}{{ formulario.correo_electronico(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.contrasena.label(class="form-label") }}{{ formulario.contrasena(class="form-control", placeholder='Mín. 8 caracteres si es alta') }}</div>
+        <div class="col-md-6">{{ formulario.codigo_empleado.label(class="form-label") }}{{ formulario.codigo_empleado(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.rol.label(class="form-label") }}{{ formulario.rol(class="form-select") }}</div>
+        <div class="col-md-6">{{ formulario.nombre.label(class="form-label") }}{{ formulario.nombre(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.apellidos.label(class="form-label") }}{{ formulario.apellidos(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.telefono.label(class="form-label") }}{{ formulario.telefono(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.documento_identidad.label(class="form-label") }}{{ formulario.documento_identidad(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.fecha_alta.label(class="form-label") }}{{ formulario.fecha_alta(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.horas_semanales.label(class="form-label") }}{{ formulario.horas_semanales(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.vacaciones_anuales.label(class="form-label") }}{{ formulario.vacaciones_anuales(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.saldo_vacaciones.label(class="form-label") }}{{ formulario.saldo_vacaciones(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.tipo_contrato.label(class="form-label") }}{{ formulario.tipo_contrato(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.centro_trabajo.label(class="form-label") }}{{ formulario.centro_trabajo(class="form-control") }}</div>
+        <div class="col-md-6">{{ formulario.responsable_id.label(class="form-label") }}{{ formulario.responsable_id(class="form-select") }}</div>
+        <div class="col-12">{{ formulario.observaciones.label(class="form-label") }}{{ formulario.observaciones(class="form-control", rows=3) }}</div>
+        <div class="col-12">{{ formulario.activo(class="form-check-input") }} {{ formulario.activo.label(class="form-check-label") }}</div>
+      </div>
+      <div class="mt-3">{{ formulario.enviar(class="btn btn-acento") }}</div>
+    </div>
+  </form>
+</div>
+{% endblock %}

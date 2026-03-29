@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ empleado.nombre_completo }}{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 mb-3">
+    <h1 class="h3 text-azul-oscuro mb-0">{{ empleado.nombre_completo }}</h1>
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('empleados_bp.editar', empleado_id=empleado.id) }}">Editar</a>
+  </div>
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6 text-secondary">Resumen mes</h2>
+          <ul class="list-unstyled small mb-0">
+            <li>Horas trabajadas: <strong>{{ resumen_mes.horas_trabajadas }}</strong></li>
+            <li>Normales: {{ resumen_mes.horas_normales }} · Extras: {{ resumen_mes.horas_extras }}</li>
+            <li>Nocturnas: {{ resumen_mes.horas_nocturnas }} · Festivas: {{ resumen_mes.horas_festivas }}</li>
+            <li>Días incompletos: {{ resumen_mes.dias_incompletos }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6 text-secondary">Vacaciones</h2>
+          <ul class="list-unstyled small mb-0">
+            <li>Saldo: <strong>{{ vacaciones.saldo }}</strong></li>
+            <li>Anuales: {{ vacaciones.anuales }}</li>
+            <li>Solicitudes pendientes: {{ vacaciones.solicitudes_pendientes }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <h2 class="h6 text-secondary mt-4">Últimos fichajes</h2>
+  <div class="table-responsive card border-0 shadow-sm">
+    <table class="table table-sm mb-0"><thead><tr><th>Fecha/hora</th><th>Tipo</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for r in ultimos_fichajes %}
+        <tr><td>{{ r.fecha_hora_servidor|fecha_hora_es }}</td><td>{{ r.tipo_registro }}</td><td>{{ r.estado }}</td></tr>
+        {% else %}<tr><td colspan="3">Sin datos</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <h2 class="h6 text-secondary mt-4">Incidencias / solicitudes</h2>
+  <ul class="list-group shadow-sm">
+    {% for s in incidencias %}
+    <li class="list-group-item small">{{ s.estado }} — {{ s.motivo[:80] }}…</li>
+    {% else %}<li class="list-group-item">Ninguna reciente</li>{% endfor %}
+  </ul>
+</div>
+{% endblock %}

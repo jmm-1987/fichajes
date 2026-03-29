@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block titulo %}Auditoría{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h4 text-azul-oscuro mt-3 mb-3">Auditoría registro #{{ registro.id }}</h1>
+  <div class="list-group shadow-sm">
+    {% for a in entradas %}
+    <div class="list-group-item">
+      <div class="d-flex justify-content-between">
+        <strong>{{ a.accion }}</strong>
+        <span class="small text-muted">{{ a.creado_en|fecha_hora_es }}</span>
+      </div>
+      <p class="small mb-1">Actor: {{ a.usuario_actor_id }} · {{ a.rol_actor or '' }}</p>
+      {% if a.motivo %}<p class="small mb-1">Motivo: {{ a.motivo }}</p>{% endif %}
+      <details class="small">
+        <summary>JSON anterior / nuevo</summary>
+        <pre class="mb-0 mt-2 bg-light p-2 rounded">{{ a.estado_anterior_json }}</pre>
+        <pre class="mb-0 mt-2 bg-light p-2 rounded">{{ a.estado_nuevo_json }}</pre>
+      </details>
+    </div>
+    {% else %}
+    <div class="list-group-item">Sin entradas</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

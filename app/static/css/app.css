@@ -1,0 +1,126 @@
+/* Variables y tema premium (blanco, azul oscuro, negro) */
+:root {
+  --jm-azul-oscuro: #0d1b2a;
+  --jm-azul-medio: #1b3a5c;
+  --jm-negro: #0a0a0a;
+  --jm-fondo: #f4f6f8;
+  --jm-blanco: #ffffff;
+  --jm-borde: #e2e6ea;
+  --jm-sombra: 0 8px 24px rgba(13, 27, 42, 0.08);
+  --jm-radio: 12px;
+}
+
+.cuerpo-app {
+  min-height: 100vh;
+  background: var(--jm-fondo);
+  color: var(--jm-negro);
+  padding-bottom: 4.5rem;
+}
+
+@media (min-width: 992px) {
+  .cuerpo-app {
+    padding-bottom: 0;
+  }
+}
+
+.text-azul-oscuro {
+  color: var(--jm-azul-oscuro) !important;
+}
+
+.barra-superior {
+  background: linear-gradient(90deg, var(--jm-azul-oscuro), var(--jm-azul-medio));
+  color: var(--jm-blanco);
+}
+
+.marca-texto {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--jm-blanco);
+}
+
+.marca-icono {
+  font-size: 1.25rem;
+  opacity: 0.9;
+}
+
+.contenedor-principal {
+  min-height: calc(100vh - 52px);
+}
+
+.barra-lateral {
+  width: 240px;
+  background: var(--jm-blanco);
+  border-right: 1px solid var(--jm-borde);
+  min-height: calc(100vh - 52px);
+}
+
+.barra-lateral .nav-link {
+  color: var(--jm-azul-oscuro);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.barra-lateral .nav-link:hover {
+  background: var(--jm-fondo);
+}
+
+.area-contenido {
+  padding-bottom: 2rem;
+}
+
+.btn-acento {
+  background: var(--jm-azul-oscuro);
+  border: none;
+  color: var(--jm-blanco);
+  border-radius: var(--jm-radio);
+  font-weight: 600;
+}
+
+.btn-acento:hover {
+  background: var(--jm-azul-medio);
+  color: var(--jm-blanco);
+}
+
+.tarjeta-estadistica {
+  border-radius: var(--jm-radio);
+  box-shadow: var(--jm-sombra);
+}
+
+.card {
+  border-radius: var(--jm-radio);
+}
+
+.table {
+  --bs-table-hover-bg: rgba(13, 27, 42, 0.04);
+}
+
+/* Portal fichaje móvil */
+.portal-fichar .btn-fichar {
+  border-radius: 16px;
+  box-shadow: var(--jm-sombra);
+}
+
+.resumen-dia {
+  border-radius: var(--jm-radio);
+}
+
+.nav-movil {
+  z-index: 1040;
+}
+
+.cuerpo-auth {
+  background: linear-gradient(145deg, var(--jm-fondo), #e8ecf1);
+}
+
+.tabla-plan .form-control-sm {
+  font-size: 0.75rem;
+}
+
+.empleado-chip {
+  cursor: grab;
+  font-size: 0.85rem;
+}
+
+.celda-plan .form-celda-plan {
+  min-width: 88px;
+}

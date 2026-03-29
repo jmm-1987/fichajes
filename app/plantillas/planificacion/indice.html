@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block titulo %}Planificación{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h3 text-azul-oscuro mt-3 mb-3">Planificación semanal</h1>
+  <form method="post" action="{{ url_for('planificacion_bp.nueva_semana') }}" class="card border-0 shadow-sm mb-4 p-3" style="max-width:480px">
+    {{ form_nueva.hidden_tag() }}
+    <div class="mb-2">{{ form_nueva.inicio_semana.label(class="form-label") }}{{ form_nueva.inicio_semana(class="form-control") }}</div>
+    <div class="mb-2">{{ form_nueva.notas.label(class="form-label") }}{{ form_nueva.notas(class="form-control") }}</div>
+    {{ form_nueva.enviar(class="btn btn-acento") }}
+  </form>
+  <h2 class="h6">Semanas</h2>
+  <ul class="list-group shadow-sm mb-4">
+    {% for p in planes %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <span>Semana del {{ p.inicio_semana|fecha_es }} · {{ p.estado }}</span>
+      <a href="{{ url_for('planificacion_bp.tablero', plan_id=p.id) }}">Abrir tablero</a>
+    </li>
+    {% else %}<li class="list-group-item">Cree una semana para empezar</li>{% endfor %}
+  </ul>
+  <h2 class="h6">Plantillas</h2>
+  <ul class="list-group shadow-sm">
+    {% for pl in plantillas %}
+    <li class="list-group-item">{{ pl.nombre }}</li>
+    {% else %}<li class="list-group-item">Ninguna (guarde desde un tablero)</li>{% endfor %}
+  </ul>
+</div>
+{% endblock %}

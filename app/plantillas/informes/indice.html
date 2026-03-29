@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block titulo %}Informes{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h3 text-azul-oscuro mt-3 mb-3">Informes de jornada</h1>
+  <form class="card border-0 shadow-sm mb-4 p-3" method="get">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3"><label class="form-label">Desde</label><input type="text" name="desde" class="form-control" placeholder="dd/mm/aaaa" autocomplete="off" value="{{ filtros.fecha_inicio|fecha_es }}"></div>
+      <div class="col-md-3"><label class="form-label">Hasta</label><input type="text" name="hasta" class="form-control" placeholder="dd/mm/aaaa" autocomplete="off" value="{{ filtros.fecha_fin|fecha_es }}"></div>
+      <div class="col-md-3"><label class="form-label">Empleado</label>
+        <select name="empleado_id" class="form-select">
+          <option value="">Todos</option>
+          {% for e in empleados %}<option value="{{ e.id }}" {% if filtros.empleado_id == e.id %}selected{% endif %}>{{ e.nombre_completo }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label">Centro</label>
+        <select name="centro" class="form-select">
+          <option value="">Todos</option>
+          {% for c in centros %}<option value="{{ c }}" {% if filtros.centro_trabajo == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label">Responsable (equipo)</label>
+        <select name="responsable_id" class="form-select">
+          <option value="">Todos</option>
+          {% for r in responsables %}<option value="{{ r.id }}" {% if filtros.equipo_responsable_id == r.id %}selected{% endif %}>{{ r.nombre_completo }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-12 d-flex flex-wrap gap-3 mt-2">
+        <label class="form-check-label"><input type="checkbox" name="extras" value="1" class="form-check-input" {% if filtros.incluir_extras %}checked{% endif %}> Incluir extras</label>
+        <label class="form-check-label"><input type="checkbox" name="nocturnas" value="1" class="form-check-input" {% if filtros.incluir_nocturnas %}checked{% endif %}> Incluir nocturnas</label>
+        <label class="form-check-label"><input type="checkbox" name="festivas" value="1" class="form-check-input" {% if filtros.incluir_festivas %}checked{% endif %}> Incluir festivas</label>
+        <label class="form-check-label"><input type="checkbox" name="solo_incidencias" value="1" class="form-check-input" {% if filtros.solo_incidencias %}checked{% endif %}> Solo incidencias</label>
+        <label class="form-check-label"><input type="checkbox" name="solo_incompletos" value="1" class="form-check-input" {% if filtros.solo_incompletos %}checked{% endif %}> Solo incompletos</label>
+      </div>
+      <div class="col-12 mt-3">
+        <button type="submit" class="btn btn-acento">Filtrar</button>
+        {% set qs = request.query_string.decode() if request.query_string else '' %}
+        <a class="btn btn-outline-secondary" href="{{ url_for('informes_bp.exportar_csv_vista') }}{% if qs %}?{{ qs }}{% endif %}">CSV</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('informes_bp.exportar_excel_vista') }}{% if qs %}?{{ qs }}{% endif %}">Excel</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('informes_bp.exportar_pdf_vista') }}{% if qs %}?{{ qs }}{% endif %}">PDF</a>
+      </div>
+    </div>
+  </form>
+  {% for fila in filas %}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white"><strong>{{ fila.empleado.nombre_completo }}</strong></div>
+    <div class="card-body">
+      <p class="small mb-2">Trabajadas: {{ fila.resumen.horas_trabajadas }} · Normales: {{ fila.resumen.horas_normales }} · Extras: {{ fila.resumen.horas_extras }}</p>
+      <details>
+        <summary class="small">Detalle diario</summary>
+        <div class="table-responsive mt-2">
+          <table class="table table-sm"><thead><tr><th>Fecha</th><th>H.trab.</th><th>Incompleto</th></tr></thead>
+            <tbody>
+              {% for d in fila.detalle %}
+              <tr><td>{{ d.fecha }}</td><td>{{ d.horas_trabajadas }}</td><td>{% if d.jornada_incompleta %}Sí{% else %}No{% endif %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted">Sin resultados con los filtros actuales.</p>
+  {% endfor %}
+</div>
+{% endblock %}

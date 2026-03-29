@@ -1,0 +1,27 @@
+[Unit]
+Description=Control horario (Gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=fichajes
+Group=fichajes
+WorkingDirectory=/srv/fichajes
+Environment=PATH=/srv/fichajes/.venv/bin
+EnvironmentFile=-/srv/fichajes/.env
+ExecStart=/srv/fichajes/.venv/bin/gunicorn \
+    --workers 3 \
+    --threads 2 \
+    --timeout 120 \
+    --bind 127.0.0.1:8000 \
+    --access-logfile - \
+    --error-logfile - \
+    wsgi:app
+KillMode=mixed
+TimeoutStopSec=30
+PrivateTmp=true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

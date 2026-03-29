@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block titulo %}Acceso denegado{% endblock %}
+{% block contenido %}
+<div class="container py-5 text-center">
+  <h1 class="display-5 text-azul-oscuro">403</h1>
+  <p>No tiene permiso para ver este recurso.</p>
+  <a href="{{ url_for('inicio_bp.panel') }}" class="btn btn-acento">Volver al panel</a>
+</div>
+{% endblock %}

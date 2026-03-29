@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block titulo %}Fichajes (admin){% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h3 text-azul-oscuro mt-3 mb-3">Registros</h1>
+  {% if solicitudes %}
+  <h2 class="h6">Solicitudes de corrección pendientes</h2>
+  <div class="table-responsive mb-4">
+    <table class="table table-sm"><thead><tr><th>Empleado</th><th>Motivo</th><th></th></tr></thead>
+      <tbody>
+        {% for s in solicitudes %}
+        <tr>
+          <td>{{ s.empleado.nombre_completo }}</td>
+          <td class="small">{{ s.motivo[:60] }}…</td>
+          <td><a href="{{ url_for('fichajes_bp.resolver_solicitud', solicitud_id=s.id) }}">Resolver</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  <div class="table-responsive card border-0 shadow-sm">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr><th>Empleado</th><th>Tipo</th><th>Fecha/hora</th><th>Origen</th><th></th></tr></thead>
+      <tbody>
+        {% for r in registros %}
+        <tr>
+          <td>{{ r.empleado.nombre_completo }}</td>
+          <td>{{ r.tipo_registro }}</td>
+          <td>{{ r.fecha_hora_servidor|fecha_hora_es }}</td>
+          <td>{{ r.origen }}</td>
+          <td>
+            <a href="{{ url_for('fichajes_bp.historial_auditoria_registro', registro_id=r.id) }}">Auditoría</a>
+            {% if current_user.rol in ['superadministrador','administrador_empresa'] %}
+            · <a href="{{ url_for('fichajes_bp.corregir_registro', registro_id=r.id) }}">Corregir</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

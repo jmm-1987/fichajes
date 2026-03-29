@@ -1,0 +1,17 @@
+{% extends 'base_auth.html' %}
+{% block titulo %}Recuperar contraseña{% endblock %}
+{% block contenido %}
+<div class="card shadow border-0 mx-3">
+  <div class="card-body p-4">
+    <h1 class="h5 text-azul-oscuro mb-3">Recuperar contraseña</h1>
+    <form method="post">
+      {{ formulario.hidden_tag() }}
+      <div class="mb-3">
+        {{ formulario.nombre_usuario.label(class="form-label") }}
+        {{ formulario.nombre_usuario(class="form-control", autocomplete='username') }}
+      </div>
+      {{ formulario.enviar(class="btn btn-acento w-100") }}
+    </form>
+  </div>
+</div>
+{% endblock %}

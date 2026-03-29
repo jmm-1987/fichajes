@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block titulo %}Configuración laboral{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h3 text-azul-oscuro mt-3 mb-4">Configuración laboral</h1>
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6">Franja nocturna</h2>
+          <form method="post">
+            {{ form_noche.hidden_tag() }}
+            <div class="mb-2">{{ form_noche.hora_inicio.label(class="form-label") }}{{ form_noche.hora_inicio(class="form-control") }}</div>
+            <div class="mb-2">{{ form_noche.hora_fin.label(class="form-label") }}{{ form_noche.hora_fin(class="form-control") }}</div>
+            {{ form_noche.enviar_nocturnas(class="btn btn-acento btn-sm") }}
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6">Nuevo festivo</h2>
+          <form method="post">
+            {{ form_festivo.hidden_tag() }}
+            <div class="mb-2">{{ form_festivo.fecha.label(class="form-label") }}{{ form_festivo.fecha(class="form-control") }}</div>
+            <div class="mb-2">{{ form_festivo.nombre.label(class="form-label") }}{{ form_festivo.nombre(class="form-control") }}</div>
+            <div class="mb-2">{{ form_festivo.ambito.label(class="form-label") }}{{ form_festivo.ambito(class="form-select") }}</div>
+            <div class="mb-2">{{ form_festivo.region.label(class="form-label") }}{{ form_festivo.region(class="form-control") }}</div>
+            <div class="mb-2">{{ form_festivo.ciudad.label(class="form-label") }}{{ form_festivo.ciudad(class="form-control") }}</div>
+            {{ form_festivo.enviar_festivo(class="btn btn-acento btn-sm") }}
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6">Parámetros (clave-valor en BD)</h2>
+          <form method="post">
+            {{ form_params.hidden_tag() }}
+            <div class="form-check mb-2">{{ form_params.fines_de_semana_festivo(class="form-check-input") }} {{ form_params.fines_de_semana_festivo.label(class="form-check-label") }}</div>
+            <div class="mb-2">{{ form_params.tolerancia_minutos.label(class="form-label") }}{{ form_params.tolerancia_minutos(class="form-control") }}</div>
+            <div class="mb-2">{{ form_params.jornada_teorica_dia.label(class="form-label") }}{{ form_params.jornada_teorica_dia(class="form-control") }}</div>
+            {{ form_params.enviar_parametros(class="btn btn-outline-primary btn-sm") }}
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <h2 class="h6 mt-5 mb-2">Festivos recientes</h2>
+  <ul class="list-group shadow-sm">
+    {% for f in festivos %}
+    <li class="list-group-item d-flex justify-content-between"><span>{{ f.fecha|fecha_es }} — {{ f.nombre }}</span><span class="badge bg-light text-dark">{{ f.ambito }}</span></li>
+    {% else %}<li class="list-group-item">Ninguno</li>{% endfor %}
+  </ul>
+</div>
+{% endblock %}

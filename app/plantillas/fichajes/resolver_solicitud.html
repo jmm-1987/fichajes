@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block titulo %}Resolver solicitud{% endblock %}
+{% block contenido %}
+<div class="container py-3" style="max-width:560px">
+  <h1 class="h5 text-azul-oscuro mb-3">Solicitud #{{ solicitud.id }}</h1>
+  <p class="small">{{ solicitud.motivo }}</p>
+  <form method="post">
+    {{ formulario.hidden_tag() }}
+    <div class="mb-3">{{ formulario.notas.label(class="form-label") }}{{ formulario.notas(class="form-control") }}</div>
+    <div class="d-flex gap-2">
+      {{ formulario.aprobar(class="btn btn-success") }}
+      {{ formulario.rechazar(class="btn btn-outline-danger") }}
+    </div>
+  </form>
+</div>
+{% endblock %}

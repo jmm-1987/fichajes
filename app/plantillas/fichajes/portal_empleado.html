@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block titulo %}Fichar{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5 portal-fichar" x-data="{ ok: false, msg: '' }">
+  <h1 class="h4 text-azul-oscuro mt-3 mb-2">Fichaje</h1>
+  <p class="text-muted small mb-4">La ubicación solo se solicita al pulsar un botón.</p>
+
+  {% if contador.mostrar_contador and contador.contador_inicio_iso %}
+  <div id="bloque-contador-jornada" class="card border-0 shadow-sm mb-4 border-start border-4 border-success" style="max-width:480px" data-inicio-utc="{{ contador.contador_inicio_iso }}" role="status" aria-live="polite">
+    <div class="card-body py-3">
+      <p class="small text-muted mb-1">Tiempo en este tramo de jornada</p>
+      <p class="h1 text-azul-oscuro mb-0 font-monospace" id="texto-contador-jornada">00:00:00</p>
+      <p class="small text-muted mb-0 mt-2">Horas · minutos · segundos (se actualiza solo)</p>
+    </div>
+  </div>
+  {% elif contador.en_pausa %}
+  <div class="alert alert-secondary mb-4" style="max-width:480px" role="status">
+    <strong>En pausa.</strong> El contador se mostrará de nuevo al fichar fin de pausa.
+  </div>
+  {% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+      <div class="card border-0 shadow-sm resumen-dia">
+        <div class="card-body">
+          <p class="small text-muted mb-1">Hoy</p>
+          <p class="h2 text-azul-oscuro mb-0">{{ resumen.horas_trabajadas }} h</p>
+          <p class="small mb-0 mt-2">Normales {{ resumen.horas_normales }} · Extras {{ resumen.horas_extras }}</p>
+          {% if resumen.jornada_incompleta %}<p class="text-warning small mb-0 mt-2">Jornada incompleta</p>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" id="form-fichar" class="d-grid gap-3" style="max-width:480px">
+    {{ formulario.hidden_tag() }}
+    {{ formulario.latitud(style='display:none') }}
+    {{ formulario.longitud(style='display:none') }}
+    {{ formulario.precision_metros(style='display:none') }}
+    {{ formulario.marca_cliente_iso(style='display:none') }}
+    <button type="submit" name="enviar_entrada" value="y" class="btn btn-acento btn-fichar py-4 fs-5" data-accion="entrada">Fichar entrada</button>
+    <button type="submit" name="enviar_salida" value="y" class="btn btn-dark btn-fichar py-4 fs-5" data-accion="salida">Fichar salida</button>
+    <div class="d-flex gap-2">
+      <button type="submit" name="enviar_pausa_inicio" value="y" class="btn btn-outline-secondary flex-fill">Inicio pausa</button>
+      <button type="submit" name="enviar_pausa_fin" value="y" class="btn btn-outline-secondary flex-fill">Fin pausa</button>
+    </div>
+  </form>
+
+  <h2 class="h6 text-secondary mt-5">Marcas de hoy</h2>
+  <ul class="list-group shadow-sm">
+    {% for r in registros %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <span>{{ r.tipo_registro }}</span>
+      <span class="small text-muted">{{ r.fecha_hora_servidor|fecha_hora_es }}</span>
+    </li>
+    {% else %}
+    <li class="list-group-item">Sin fichajes hoy</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
+{% block scripts_extra %}
+<script src="{{ url_for('static', filename='js/fichajes.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block titulo %}Calendario vacaciones{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h4 text-azul-oscuro mt-3 mb-3">Vacaciones · {{ anio }}-{% if mes < 10 %}0{% endif %}{{ mes }}</h1>
+  <ul class="list-group shadow-sm">
+    {% for s in solicitudes %}
+    <li class="list-group-item">
+      <strong>{{ s.empleado.nombre_completo if s.empleado else '' }}</strong>
+      {{ s.fecha_inicio|fecha_es }} — {{ s.fecha_fin|fecha_es }} <span class="badge bg-light text-dark">{{ s.estado }}</span>
+    </li>
+    {% else %}<li class="list-group-item">Sin datos en el mes</li>{% endfor %}
+  </ul>
+</div>
+{% endblock %}
