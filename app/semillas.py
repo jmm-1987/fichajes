@@ -19,6 +19,7 @@ from app.extensiones import db
 from app.modelos import (
     ConfiguracionHorasNocturnas,
     Empleado,
+    Empresa,
     Festivo,
     ItemPlantillaPlanificacion,
     PlanificacionSemanal,
@@ -35,25 +36,34 @@ def cargar_datos_demostracion() -> None:
     if Usuario.query.filter_by(correo_electronico="superadmin").first():
         return
 
-    def crear_usuario(identificador: str, pwd: str, rol: str) -> Usuario:
+    def crear_usuario(identificador: str, pwd: str, rol: str, empresa_id=None) -> Usuario:
         u = Usuario(
             correo_electronico=identificador.strip().lower(),
             rol=rol,
             activo=True,
+            empresa_id=empresa_id,
         )
         u.establecer_contrasena(pwd)
         db.session.add(u)
         db.session.flush()
         return u
 
+    # Empresa demo por defecto
+    empresa_demo = Empresa.query.filter_by(nombre="Empresa demo").first()
+    if not empresa_demo:
+        empresa_demo = Empresa(nombre="Empresa demo", activa=True)
+        db.session.add(empresa_demo)
+        db.session.flush()
+
     super_u = crear_usuario("superadmin", "Demo1234!", RolUsuario.SUPERADMINISTRADOR)
-    manager_u = crear_usuario("manager", "Demo1234!", RolUsuario.RESPONSABLE)
-    empleado_u = crear_usuario("empleado", "Demo1234!", RolUsuario.EMPLEADO)
+    manager_u = crear_usuario("manager", "Demo1234!", RolUsuario.RESPONSABLE, empresa_id=empresa_demo.id)
+    empleado_u = crear_usuario("empleado", "Demo1234!", RolUsuario.EMPLEADO, empresa_id=empresa_demo.id)
 
     hoy = date.today()
 
     emp_manager = Empleado(
         usuario_id=manager_u.id,
+        empresa_id=empresa_demo.id,
         codigo_empleado="M001",
         nombre="Mánager",
         apellidos="Demo",
@@ -81,6 +91,7 @@ def cargar_datos_demostracion() -> None:
         activo=True,
         centro_trabajo="Oficina central",
         responsable_id=emp_manager.id,
+        empresa_id=empresa_demo.id,
     )
     db.session.add(emp_trabajador)
     db.session.flush()

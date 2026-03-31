@@ -26,7 +26,7 @@ from app.fichajes.servicios import (
     registrar_marca,
     resolver_solicitud_correccion,
 )
-from app.modelos import RegistroJornada, SolicitudCorreccion
+from app.modelos import Empleado, RegistroJornada, SolicitudCorreccion
 from app.utilidades.fechas import ZONA_MADRID
 from app.utilidades.predicados import (
     es_administrador_o_superior,
@@ -210,6 +210,14 @@ def listado_admin():
     consulta = RegistroJornada.query.filter(
         RegistroJornada.estado != EstadoRegistroJornada.ANULADO,
     )
+
+    # Filtrar por empresa del usuario actual (salvo superadmin)
+    if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
+        emp_actual = getattr(current_user, "empleado", None)
+        if emp_actual:
+            consulta = consulta.join(Empleado).filter(
+                Empleado.empresa_id == emp_actual.empresa_id
+            )
     if emp_filtro and puede_gestionar_empleado(emp_filtro):
         consulta = consulta.filter(RegistroJornada.empleado_id == emp_filtro)
     elif not es_administrador_o_superior():

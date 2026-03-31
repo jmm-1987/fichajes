@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block titulo %}Empresas{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h3 text-azul-oscuro mt-3 mb-4">Empresas</h1>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6">Nueva empresa</h2>
+          <form method="post" action="{{ url_for('administracion_bp.crear_empresa_rapida') }}">
+            <div class="mb-2">
+              <label for="nombre" class="form-label">Nombre</label>
+              <input type="text" name="nombre" id="nombre" class="form-control" required />
+            </div>
+            <button type="submit" class="btn btn-acento btn-sm">Crear</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6 mb-3">Listado</h2>
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>CIF</th>
+                <th>Activa</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in empresas %}
+              <tr>
+                <td>{{ e.id }}</td>
+                <td>{{ e.nombre }}</td>
+                <td>{{ e.cif or '—' }}</td>
+                <td>
+                  {% if e.activa %}
+                  <span class="badge bg-success">Activa</span>
+                  {% else %}
+                  <span class="badge bg-secondary">Inactiva</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <form method="post" action="{{ url_for('administracion_bp.toggle_activa_empresa', empresa_id=e.id) }}">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                      {% if e.activa %}Desactivar{% else %}Activar{% endif %}
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5">Sin empresas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -2,6 +2,7 @@
 
 from app.extensiones import db
 from app.modelos.usuario import ahora_utc
+from app.modelos.empresa import Empresa
 
 
 class Empleado(db.Model):
@@ -43,6 +44,15 @@ class Empleado(db.Model):
         default=ahora_utc,
         onupdate=ahora_utc,
     )
+
+    empresa_id = db.Column(
+        db.Integer,
+        db.ForeignKey("empresas.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+
+    empresa = db.relationship("Empresa", backref="empleados")
 
     usuario = db.relationship("Usuario", back_populates="empleado")
     responsable = db.relationship(

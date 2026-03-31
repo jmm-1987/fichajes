@@ -7,6 +7,7 @@ from flask import abort, current_app
 from flask_login import current_user
 
 from app.constantes import RolUsuario
+from app.modelos import Empleado
 
 
 def roles_permitidos(*roles: str) -> Callable:
@@ -60,23 +61,27 @@ def puede_gestionar_empleado(empleado_id: int) -> bool:
     """
     if not current_user.is_authenticated:
         return False
-    if current_user.rol in (
-        RolUsuario.SUPERADMINISTRADOR,
-        RolUsuario.ADMINISTRADOR_EMPRESA,
-    ):
+    empleado_obj = Empleado.query.filter_by(id=empleado_id).first()
+    if not empleado_obj:
+        return False
+
+    # Superadmin puede gestionar cualquier empleado, independientemente de empresa.
+    if current_user.rol == RolUsuario.SUPERADMINISTRADOR:
         return True
+
+    # Resto de roles solo dentro de su misma empresa.
     empleado_actual = getattr(current_user, "empleado", None)
     if not empleado_actual:
         return False
+    if empleado_actual.empresa_id != empleado_obj.empresa_id:
+        return False
+
+    if current_user.rol == RolUsuario.ADMINISTRADOR_EMPRESA:
+        return True
     if current_user.rol == RolUsuario.EMPLEADO:
         return empleado_actual.id == empleado_id
     if current_user.rol == RolUsuario.RESPONSABLE:
-        from app.modelos import Empleado
-
-        subordinado = Empleado.query.filter_by(id=empleado_id).first()
-        if not subordinado:
-            return False
-        return subordinado.responsable_id == empleado_actual.id
+        return empleado_obj.responsable_id == empleado_actual.id
     return False
 
 

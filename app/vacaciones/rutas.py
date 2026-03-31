@@ -113,16 +113,27 @@ def calendario_simple():
 )
 def listado_admin():
     marcar_disfrutadas_pasadas()
-    pendientes = (
-        SolicitudVacaciones.query.filter_by(
-            estado=EstadoSolicitudVacaciones.PENDIENTE
-        )
-        .order_by(SolicitudVacaciones.solicitado_en.desc())
-        .all()
+    pendientes_q = SolicitudVacaciones.query.filter_by(
+        estado=EstadoSolicitudVacaciones.PENDIENTE
     )
+    # Filtrar por empresa del usuario actual (salvo superadmin)
+    if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
+        emp_actual = getattr(current_user, "empleado", None)
+        if emp_actual:
+            pendientes_q = pendientes_q.join(Empleado).filter(
+                Empleado.empresa_id == emp_actual.empresa_id
+            )
+    pendientes = pendientes_q.order_by(
+        SolicitudVacaciones.solicitado_en.desc()
+    ).all()
     form_manual = FormularioVacacionesManual()
+    emp_q = Empleado.query.filter_by(activo=True)
+    if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
+        emp_actual = getattr(current_user, "empleado", None)
+        if emp_actual:
+            emp_q = emp_q.filter(Empleado.empresa_id == emp_actual.empresa_id)
     form_manual.empleado_id.choices = [
-        (e.id, e.nombre_completo) for e in Empleado.query.filter_by(activo=True).all()
+        (e.id, e.nombre_completo) for e in emp_q.all()
     ]
     if form_manual.validate_on_submit():
         sol = crear_solicitud(

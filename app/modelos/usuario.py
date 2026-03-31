@@ -6,6 +6,7 @@ from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensiones import db
+from app.modelos.empresa import Empresa
 
 
 def ahora_utc():
@@ -42,6 +43,15 @@ class Usuario(UserMixin, db.Model):
         default=ahora_utc,
         onupdate=ahora_utc,
     )
+
+    empresa_id = db.Column(
+        db.Integer,
+        db.ForeignKey("empresas.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+
+    empresa = db.relationship("Empresa", backref="usuarios")
 
     empleado = db.relationship(
         "Empleado",

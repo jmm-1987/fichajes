@@ -52,7 +52,19 @@ def indice():
         solo_incompletos=request.args.get("solo_incompletos", "0") == "1",
     )
     filas = construir_informe_empleado(f)
-    empleados = Empleado.query.filter_by(activo=True).order_by(Empleado.apellidos).all()
+
+    emp_q = Empleado.query.filter_by(activo=True)
+    # Filtrar por empresa del usuario actual (salvo superadmin)
+    from flask_login import current_user
+    from app.constantes import RolUsuario
+
+    if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
+        emp_actual = getattr(current_user, "empleado", None)
+        if emp_actual:
+            emp_q = emp_q.filter(Empleado.empresa_id == emp_actual.empresa_id)
+
+    empleados = emp_q.order_by(Empleado.apellidos).all()
+
     ids_resp = [
         r[0]
         for r in db.session.query(Empleado.responsable_id)

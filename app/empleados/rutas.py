@@ -29,6 +29,11 @@ empleados_bp = Blueprint(
 
 def _choices_responsables(excluir_id: int | None = None):
     q = Empleado.query.filter_by(activo=True)
+    # Filtrar por empresa del usuario actual (salvo superadmin que puede ver todas)
+    if not es_superadministrador():
+        emp_actual = getattr(current_user, "empleado", None)
+        if emp_actual:
+            q = q.filter(Empleado.empresa_id == emp_actual.empresa_id)
     if excluir_id:
         q = q.filter(Empleado.id != excluir_id)
     return [(0, "— Sin asignar —")] + [(e.id, e.nombre_completo) for e in q.all()]
@@ -42,8 +47,14 @@ def _choices_responsables(excluir_id: int | None = None):
     RolUsuario.RESPONSABLE,
 )
 def listado():
-    if es_superadministrador() or current_user.rol == RolUsuario.ADMINISTRADOR_EMPRESA:
+    if es_superadministrador():
         lista = Empleado.query.order_by(Empleado.apellidos, Empleado.nombre).all()
+    elif current_user.rol == RolUsuario.ADMINISTRADOR_EMPRESA:
+        emp_actual = getattr(current_user, "empleado", None)
+        q = Empleado.query
+        if emp_actual:
+            q = q.filter(Empleado.empresa_id == emp_actual.empresa_id)
+        lista = q.order_by(Empleado.apellidos, Empleado.nombre).all()
     else:
         emp_id = obtener_id_empleado_actual()
         lista = Empleado.query.filter_by(responsable_id=emp_id).all()

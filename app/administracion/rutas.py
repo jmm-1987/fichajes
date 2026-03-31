@@ -11,7 +11,7 @@ from app.administracion.formularios import (
 from app.administracion.servicios import activar_configuracion_nocturna, establecer_config
 from app.constantes import RolUsuario
 from app.extensiones import db
-from app.modelos import ConfiguracionHorasNocturnas, Festivo
+from app.modelos import ConfiguracionHorasNocturnas, Empresa, Festivo
 from app.utilidades.predicados import roles_permitidos
 
 administracion_bp = Blueprint(
@@ -96,3 +96,41 @@ def configuracion_laboral():
         form_params=form_params,
         festivos=festivos,
     )
+
+
+@administracion_bp.route("/empresas")
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def listado_empresas():
+    empresas = Empresa.query.order_by(Empresa.nombre).all()
+    return render_template("empresas_listado.html", empresas=empresas)
+
+
+@administracion_bp.route("/empresas/nueva", methods=["POST"])
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def crear_empresa_rapida():
+    nombre = (request.form.get("nombre") or "").strip()
+    if not nombre:
+        flash("El nombre de empresa es obligatorio.", "peligro")
+        return redirect(url_for("administracion_bp.listado_empresas"))
+    existe = Empresa.query.filter_by(nombre=nombre).first()
+    if existe:
+        flash("Ya existe una empresa con ese nombre.", "peligro")
+        return redirect(url_for("administracion_bp.listado_empresas"))
+    emp = Empresa(nombre=nombre, activa=True)
+    db.session.add(emp)
+    db.session.commit()
+    flash("Empresa creada.", "exito")
+    return redirect(url_for("administracion_bp.listado_empresas"))
+
+
+@administracion_bp.route("/empresas/<int:empresa_id>/toggle", methods=["POST"])
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def toggle_activa_empresa(empresa_id: int):
+    emp = Empresa.query.get_or_404(empresa_id)
+    emp.activa = not emp.activa
+    db.session.commit()
+    flash("Estado de la empresa actualizado.", "exito")
+    return redirect(url_for("administracion_bp.listado_empresas"))

@@ -5,7 +5,7 @@ import pytest
 from app import crear_aplicacion
 from configuracion import ConfiguracionPruebas
 from app.extensiones import db
-from app.modelos import Usuario
+from app.modelos import Empresa, Usuario
 
 
 @pytest.fixture
@@ -27,10 +27,14 @@ def cliente(aplicacion):
 @pytest.fixture
 def usuario_ejemplo(aplicacion):
     with aplicacion.app_context():
+        empresa = Empresa(nombre="Empresa test", activa=True)
+        db.session.add(empresa)
+        db.session.flush()
         u = Usuario(
             correo_electronico="test@test.local",
             rol="empleado",
             activo=True,
+            empresa_id=empresa.id,
         )
         u.establecer_contrasena("Test1234!")
         db.session.add(u)

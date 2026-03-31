@@ -32,7 +32,7 @@ def crear_empleado_con_usuario(
     if saldo is None:
         saldo = datos.get("vacaciones_anuales", 22)
 
-    emp = Empleado(
+    emp_kwargs = dict(
         usuario_id=usuario.id,
         codigo_empleado=datos["codigo_empleado"].strip(),
         nombre=datos["nombre"].strip(),
@@ -50,6 +50,18 @@ def crear_empleado_con_usuario(
         responsable_id=datos.get("responsable_id") or None,
         observaciones=(datos.get("observaciones") or "").strip() or None,
     )
+    # Empresa: si viene en datos la usamos; si no, heredamos empresa del usuario actual (si existe).
+    from flask_login import current_user
+
+    empresa_id = datos.get("empresa_id")
+    if empresa_id is None:
+        emp_actual = getattr(current_user, "empleado", None)
+        if emp_actual is not None:
+            empresa_id = emp_actual.empresa_id
+    if empresa_id is not None:
+        emp_kwargs["empresa_id"] = empresa_id
+
+    emp = Empleado(**emp_kwargs)
     db.session.add(emp)
     db.session.flush()
     registrar_auditoria(
