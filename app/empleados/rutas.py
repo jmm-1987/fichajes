@@ -11,7 +11,7 @@ from app.empleados.servicios import (
     resumen_mes_actual,
     vacaciones_resumen,
 )
-from app.modelos import Empleado, Empresa, RegistroJornada, SolicitudCorreccion
+from app.modelos import Empleado, Empresa, RegistroJornada, SolicitudCorreccion, Usuario
 from app.utilidades.predicados import (
     es_superadministrador,
     obtener_id_empleado_actual,
@@ -27,16 +27,20 @@ empleados_bp = Blueprint(
 )
 
 
-def _choices_responsables(excluir_id: int | None = None):
-    q = Empleado.query.filter_by(activo=True)
-    # Filtrar por empresa del usuario actual (salvo superadmin que puede ver todas)
+def _choices_responsables():
+    """Responsables: usuarios managers (rol responsable) por empresa."""
+    q = Usuario.query.filter_by(rol=RolUsuario.RESPONSABLE, activo=True)
     if not es_superadministrador():
+        empresa_id = getattr(current_user, "empresa_id", None)
         emp_actual = getattr(current_user, "empleado", None)
-        if emp_actual:
-            q = q.filter(Empleado.empresa_id == emp_actual.empresa_id)
-    if excluir_id:
-        q = q.filter(Empleado.id != excluir_id)
-    return [(0, "— Sin asignar —")] + [(e.id, e.nombre_completo) for e in q.all()]
+        if empresa_id is None and emp_actual is not None:
+            empresa_id = emp_actual.empresa_id
+        if empresa_id is not None:
+            q = q.filter(Usuario.empresa_id == empresa_id)
+    opciones = [(0, "— Sin asignar —")]
+    for u in q.order_by(Usuario.correo_electronico).all():
+        opciones.append((u.id, u.correo_electronico))
+    return opciones
 
 
 @empleados_bp.route("/")
@@ -66,6 +70,7 @@ def listado():
 @roles_permitidos(
     RolUsuario.SUPERADMINISTRADOR,
     RolUsuario.ADMINISTRADOR_EMPRESA,
+    RolUsuario.RESPONSABLE,
 )
 def nuevo():
     ClaseForm = (
@@ -107,7 +112,7 @@ def nuevo():
                 "saldo_vacaciones": formulario.saldo_vacaciones.data,
                 "tipo_contrato": formulario.tipo_contrato.data,
                 "centro_trabajo": formulario.centro_trabajo.data,
-                "responsable_id": formulario.responsable_id.data
+                "responsable_usuario_id": formulario.responsable_id.data
                 if formulario.responsable_id.data
                 else None,
                 "activo": formulario.activo.data,
@@ -115,7 +120,7 @@ def nuevo():
                 "rol": formulario.rol.data,
             }
             if formulario.responsable_id.data == 0:
-                datos["responsable_id"] = None
+                datos["responsable_usuario_id"] = None
             if es_superadministrador() and hasattr(formulario, "empresa_id"):
                 datos["empresa_id"] = formulario.empresa_id.data
             crear_empleado_con_usuario(
@@ -168,6 +173,7 @@ def detalle(empleado_id: int):
 @roles_permitidos(
     RolUsuario.SUPERADMINISTRADOR,
     RolUsuario.ADMINISTRADOR_EMPRESA,
+    RolUsuario.RESPONSABLE,
 )
 def editar(empleado_id: int):
     emp = Empleado.query.get_or_404(empleado_id)
@@ -183,7 +189,7 @@ def editar(empleado_id: int):
     formulario = ClaseForm(obj=emp)
     formulario.correo_electronico.data = emp.usuario.correo_electronico
     formulario.rol.data = emp.usuario.rol
-    formulario.responsable_id.choices = _choices_responsables(excluir_id=emp.id)
+    formulario.responsable_id.choices = _choices_responsables()
     if es_superadministrador() and hasattr(formulario, "empresa_id"):
         formulario.empresa_id.choices = [
             (e.id, e.nombre) for e in Empresa.query.order_by(Empresa.nombre).all()
@@ -191,7 +197,7 @@ def editar(empleado_id: int):
 
     if request.method == "GET":
         formulario.saldo_vacaciones.data = emp.saldo_vacaciones
-        formulario.responsable_id.data = emp.responsable_id or 0
+        formulario.responsable_id.data = emp.responsable_usuario_id or 0
         if es_superadministrador() and hasattr(formulario, "empresa_id"):
             formulario.empresa_id.data = emp.empresa_id
 
@@ -209,7 +215,7 @@ def editar(empleado_id: int):
             "saldo_vacaciones": formulario.saldo_vacaciones.data,
             "tipo_contrato": formulario.tipo_contrato.data,
             "centro_trabajo": formulario.centro_trabajo.data,
-            "responsable_id": formulario.responsable_id.data
+            "responsable_usuario_id": formulario.responsable_id.data
             if formulario.responsable_id.data
             else None,
             "activo": formulario.activo.data,
@@ -217,7 +223,7 @@ def editar(empleado_id: int):
             "rol": formulario.rol.data,
         }
         if formulario.responsable_id.data == 0:
-            datos["responsable_id"] = None
+            datos["responsable_usuario_id"] = None
         if es_superadministrador() and hasattr(formulario, "empresa_id"):
             datos["empresa_id"] = formulario.empresa_id.data
         pwd = (formulario.contrasena.data or "").strip() or None

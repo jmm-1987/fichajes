@@ -57,6 +57,7 @@ class Usuario(UserMixin, db.Model):
         "Empleado",
         back_populates="usuario",
         uselist=False,
+        foreign_keys="Empleado.usuario_id",
     )
 
     def establecer_contrasena(self, contrasena_plana: str) -> None:

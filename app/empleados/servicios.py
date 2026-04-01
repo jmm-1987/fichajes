@@ -47,10 +47,12 @@ def crear_empleado_con_usuario(
         tipo_contrato=(datos.get("tipo_contrato") or "").strip() or None,
         activo=bool(datos.get("activo", True)),
         centro_trabajo=(datos.get("centro_trabajo") or "").strip() or None,
-        responsable_id=datos.get("responsable_id") or None,
+        responsable_id=None,
+        responsable_usuario_id=datos.get("responsable_usuario_id") or None,
         observaciones=(datos.get("observaciones") or "").strip() or None,
     )
-    # Empresa: si viene en datos la usamos; si no, heredamos empresa del usuario actual (si existe).
+    # Empresa: si viene en datos la usamos; si no, heredamos empresa del usuario actual
+    # (primero desde su ficha de empleado, y si no, desde usuario.empresa_id).
     from flask_login import current_user
 
     empresa_id = datos.get("empresa_id")
@@ -58,6 +60,8 @@ def crear_empleado_con_usuario(
         emp_actual = getattr(current_user, "empleado", None)
         if emp_actual is not None:
             empresa_id = emp_actual.empresa_id
+        else:
+            empresa_id = getattr(current_user, "empresa_id", None)
     if empresa_id is not None:
         emp_kwargs["empresa_id"] = empresa_id
 

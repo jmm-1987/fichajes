@@ -119,10 +119,12 @@ def configuracion_laboral_empresa():
     empresa_id = None
     if current_user.rol in (RolUsuario.ADMINISTRADOR_EMPRESA, RolUsuario.RESPONSABLE):
         emp_actual = getattr(current_user, "empleado", None)
-        if not emp_actual or not emp_actual.empresa_id:
+        empresa_id = getattr(current_user, "empresa_id", None)
+        if empresa_id is None and emp_actual is not None:
+            empresa_id = emp_actual.empresa_id
+        if not empresa_id:
             flash("No hay empresa asociada al usuario actual.", "peligro")
             return redirect(url_for("inicio_bp.panel"))
-        empresa_id = emp_actual.empresa_id
     else:
         empresa_id = request.args.get("empresa_id", type=int)
         if not empresa_id:
@@ -131,6 +133,10 @@ def configuracion_laboral_empresa():
 
     empresa = Empresa.query.get_or_404(empresa_id)
     form_params = FormularioParametrosLaborales(prefix="par")
+    form_noche = FormularioHorasNocturnas(prefix="noche")
+    form_festivo = FormularioFestivo(prefix="fest")
+
+    from app.modelos import ConfiguracionHorasNocturnas, Festivo
 
     if request.method == "GET":
         cfg_fs = obtener_config_empresa(empresa_id, "fines_semana_festivo", "0")
@@ -142,34 +148,92 @@ def configuracion_laboral_empresa():
         form_params.tolerancia_minutos.data = cfg_tol.valor
         form_params.jornada_teorica_dia.data = cfg_jornada.valor
 
-    if request.method == "POST" and form_params.validate_on_submit():
-        establecer_config_empresa(
-            empresa_id,
-            "fines_semana_festivo",
-            "1" if form_params.fines_de_semana_festivo.data else "0",
-        )
-        if form_params.tolerancia_minutos.data:
+        noct_activa = ConfiguracionHorasNocturnas.query.filter_by(
+            empresa_id=empresa_id, activo=True
+        ).first()
+        if noct_activa:
+            form_noche.hora_inicio.data = noct_activa.hora_inicio
+            form_noche.hora_fin.data = noct_activa.hora_fin
+
+    if request.method == "POST":
+        if "noche-enviar_nocturnas" in request.form and form_noche.validate():
+            # Desactivar anteriores y activar una nueva para la empresa
+            for fila in ConfiguracionHorasNocturnas.query.filter_by(
+                empresa_id=empresa_id
+            ).all():
+                fila.activo = False
+            nueva = ConfiguracionHorasNocturnas(
+                hora_inicio=form_noche.hora_inicio.data,
+                hora_fin=form_noche.hora_fin.data,
+                activo=True,
+                empresa_id=empresa_id,
+            )
+            db.session.add(nueva)
+            db.session.commit()
+            flash("Franja nocturna actualizada para la empresa.", "exito")
+            return redirect(url_for("administracion_bp.configuracion_laboral_empresa"))
+
+        if "fest-enviar_festivo" in request.form and form_festivo.validate():
+            f = Festivo(
+                fecha=form_festivo.fecha.data,
+                nombre=form_festivo.nombre.data,
+                ambito=form_festivo.ambito.data,
+                ciudad=form_festivo.ciudad.data or None,
+                region=form_festivo.region.data or None,
+                activo=True,
+                empresa_id=empresa_id,
+            )
+            db.session.add(f)
+            db.session.commit()
+            flash("Festivo añadido para la empresa.", "exito")
+            return redirect(url_for("administracion_bp.configuracion_laboral_empresa"))
+
+        if "par-enviar_parametros" in request.form and form_params.validate():
             establecer_config_empresa(
                 empresa_id,
-                "tolerancia_fichaje_minutos",
-                form_params.tolerancia_minutos.data.strip(),
+                "fines_semana_festivo",
+                "1" if form_params.fines_de_semana_festivo.data else "0",
             )
-        if form_params.jornada_teorica_dia.data:
-            establecer_config_empresa(
-                empresa_id,
-                "jornada_teorica_horas_dia",
-                form_params.jornada_teorica_dia.data.strip(),
+            if form_params.tolerancia_minutos.data:
+                establecer_config_empresa(
+                    empresa_id,
+                    "tolerancia_fichaje_minutos",
+                    form_params.tolerancia_minutos.data.strip(),
+                )
+            if form_params.jornada_teorica_dia.data:
+                establecer_config_empresa(
+                    empresa_id,
+                    "jornada_teorica_horas_dia",
+                    form_params.jornada_teorica_dia.data.strip(),
+                )
+            flash(
+                f"Configuración laboral guardada para {empresa.nombre}.",
+                "exito",
             )
-        flash(
-            f"Configuración laboral guardada para {empresa.nombre}.",
-            "exito",
+            return redirect(url_for("administracion_bp.configuracion_laboral_empresa"))
+
+    festivos = (
+        Festivo.query.filter_by(empresa_id=empresa_id, activo=True)
+        .order_by(Festivo.fecha.desc())
+        .limit(50)
+        .all()
+    )
+    nocturna = (
+        ConfiguracionHorasNocturnas.query.filter_by(
+            empresa_id=empresa_id, activo=True
         )
-        return redirect(url_for("administracion_bp.configuracion_laboral_empresa"))
+        .order_by(ConfiguracionHorasNocturnas.id.desc())
+        .first()
+    )
 
     return render_template(
         "laboral_empresa.html",
         form_params=form_params,
+        form_noche=form_noche,
+        form_festivo=form_festivo,
         empresa=empresa,
+        festivos=festivos,
+        nocturna=nocturna,
     )
 
 
@@ -242,3 +306,16 @@ def crear_manager_empresa(empresa_id: int):
         formulario=form,
         empresa=empresa,
     )
+
+
+@administracion_bp.route("/responsables")
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def listado_responsables():
+    """Listado de managers (usuarios con rol responsable) por empresa."""
+    q = (
+        Usuario.query.filter_by(rol=RolUsuario.RESPONSABLE)
+        .order_by(Usuario.empresa_id.nullsfirst(), Usuario.correo_electronico)
+        .all()
+    )
+    return render_template("responsables_listado.html", responsables=q)

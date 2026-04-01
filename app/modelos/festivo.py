@@ -2,6 +2,7 @@
 
 from app.extensiones import db
 from app.modelos.usuario import ahora_utc
+from app.modelos.empresa import Empresa
 
 
 class Festivo(db.Model):
@@ -16,6 +17,12 @@ class Festivo(db.Model):
     ciudad = db.Column(db.String(120), nullable=True)
     region = db.Column(db.String(120), nullable=True)
     activo = db.Column(db.Boolean, nullable=False, default=True)
+    empresa_id = db.Column(
+        db.Integer,
+        db.ForeignKey("empresas.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     creado_en = db.Column(
         db.DateTime(timezone=True), nullable=False, default=ahora_utc
     )
@@ -30,6 +37,12 @@ class ConfiguracionHorasNocturnas(db.Model):
     hora_inicio = db.Column(db.Time, nullable=False)
     hora_fin = db.Column(db.Time, nullable=False)
     activo = db.Column(db.Boolean, nullable=False, default=True)
+    empresa_id = db.Column(
+        db.Integer,
+        db.ForeignKey("empresas.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     creado_en = db.Column(
         db.DateTime(timezone=True), nullable=False, default=ahora_utc
     )

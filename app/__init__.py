@@ -5,7 +5,6 @@ from flask import Flask, render_template
 from configuracion import Configuracion, ConfiguracionPruebas
 from app.extensiones import csrf, db, login_manager, migrate
 from app.modelos import Usuario
-from app.semillas import cargar_datos_demostracion
 
 
 def crear_aplicacion(config_class=Configuracion) -> Flask:
@@ -49,7 +48,35 @@ def crear_aplicacion(config_class=Configuracion) -> Flask:
         uri_bd = aplicacion_flask.config.get("SQLALCHEMY_DATABASE_URI", "")
         if uri_bd.startswith("sqlite:///"):
             db.create_all()
-            cargar_datos_demostracion()
+            # Asegurar columna responsable_usuario_id en empleados (actualizaciones en caliente)
+            from sqlalchemy import text
+
+            info_cols = db.session.execute(text("PRAGMA table_info(empleados);")).fetchall()
+            nombres_cols = {fila[1] for fila in info_cols}
+            if "responsable_usuario_id" not in nombres_cols:
+                db.session.execute(
+                    text(
+                        "ALTER TABLE empleados ADD COLUMN responsable_usuario_id INTEGER"
+                    )
+                )
+                db.session.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_empleados_responsable_usuario_id "
+                        "ON empleados (responsable_usuario_id)"
+                    )
+                )
+                db.session.commit()
+
+            # Crear superadmin por defecto si no hay usuarios
+            if not Usuario.query.first():
+                admin = Usuario(
+                    correo_electronico="superadmin",
+                    rol="superadministrador",
+                    activo=True,
+                )
+                admin.establecer_contrasena("Demo1234!")
+                db.session.add(admin)
+                db.session.commit()
 
     if aplicacion_flask.config.get("DETRAS_DE_PROXY"):
         from werkzeug.middleware.proxy_fix import ProxyFix

@@ -7,7 +7,7 @@ from flask import abort, current_app
 from flask_login import current_user
 
 from app.constantes import RolUsuario
-from app.modelos import Empleado
+from app.modelos import Empleado, Usuario
 
 
 def roles_permitidos(*roles: str) -> Callable:
@@ -71,17 +71,29 @@ def puede_gestionar_empleado(empleado_id: int) -> bool:
 
     # Resto de roles solo dentro de su misma empresa.
     empleado_actual = getattr(current_user, "empleado", None)
-    if not empleado_actual:
-        return False
-    if empleado_actual.empresa_id != empleado_obj.empresa_id:
-        return False
+    empresa_usuario = getattr(current_user, "empresa_id", None)
+    empresa_obj = empleado_obj.empresa_id
 
     if current_user.rol == RolUsuario.ADMINISTRADOR_EMPRESA:
-        return True
+        # Admin empresa: por empresa (desde empleado o empresa_id en usuario)
+        if empresa_usuario is not None:
+            return empresa_usuario == empresa_obj
+        if empleado_actual:
+            return empleado_actual.empresa_id == empresa_obj
+        return False
+
     if current_user.rol == RolUsuario.EMPLEADO:
-        return empleado_actual.id == empleado_id
+        return empleado_actual is not None and empleado_actual.id == empleado_id
+
     if current_user.rol == RolUsuario.RESPONSABLE:
-        return empleado_obj.responsable_id == empleado_actual.id
+        # Manager: puede gestionar empleados de su empresa cuyo responsable_usuario_id sea su usuario
+        if empresa_usuario is not None and empresa_usuario != empresa_obj:
+            return False
+        if empleado_obj.responsable_usuario_id is not None:
+            return empleado_obj.responsable_usuario_id == current_user.id
+        # Compatibilidad antigua: caer al comportamiento previo si no hay responsable_usuario_id
+        if empleado_actual:
+            return empleado_obj.responsable_id == empleado_actual.id
     return False
 
 

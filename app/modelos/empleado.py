@@ -33,6 +33,12 @@ class Empleado(db.Model):
         db.Integer,
         db.ForeignKey("empleados.id", ondelete="SET NULL"),
         nullable=True,
+    )  # DEPRECATED: usar responsable_usuario_id
+    responsable_usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("usuarios.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     observaciones = db.Column(db.Text, nullable=True)
     creado_en = db.Column(
@@ -54,7 +60,11 @@ class Empleado(db.Model):
 
     empresa = db.relationship("Empresa", backref="empleados")
 
-    usuario = db.relationship("Usuario", back_populates="empleado")
+    usuario = db.relationship(
+        "Usuario",
+        back_populates="empleado",
+        foreign_keys=[usuario_id],
+    )
     responsable = db.relationship(
         "Empleado",
         remote_side=[id],

@@ -3,6 +3,7 @@
   {% if current_user.is_authenticated and current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
   {% if current_user.rol == 'superadministrador' %}
   <a class="nav-link" href="{{ url_for('administracion_bp.listado_empresas') }}">Empresas</a>
+  <a class="nav-link" href="{{ url_for('administracion_bp.listado_responsables') }}">Responsables</a>
   {% endif %}
   <a class="nav-link" href="{{ url_for('empleados_bp.listado') }}">Empleados</a>
   <a class="nav-link" href="{{ url_for('fichajes_bp.listado_admin') }}">Fichajes</a>

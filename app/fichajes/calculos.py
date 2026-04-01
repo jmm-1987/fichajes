@@ -91,21 +91,35 @@ def parse_hora_config(cadena: str) -> time:
     return time(h, m)
 
 
-def obtener_ventana_nocturna() -> Tuple[time, time]:
-    """Inicio y fin de franja nocturna desde configuración de app."""
+def obtener_ventana_nocturna(empresa_id: int | None) -> Tuple[time, time]:
+    """Inicio y fin de franja nocturna, priorizando configuración por empresa."""
+    from app.modelos import ConfiguracionHorasNocturnas
+
+    if empresa_id is not None:
+        cfg = (
+            ConfiguracionHorasNocturnas.query.filter_by(
+                empresa_id=empresa_id, activo=True
+            )
+            .order_by(ConfiguracionHorasNocturnas.id.desc())
+            .first()
+        )
+        if cfg:
+            return cfg.hora_inicio, cfg.hora_fin
+
     ini = current_app.config.get("HORAS_NOCTURNAS_INICIO", "22:00")
     fin = current_app.config.get("HORAS_NOCTURNAS_FIN", "06:00")
     return parse_hora_config(str(ini)), parse_hora_config(str(fin))
 
 
-def es_festivo(d: date) -> bool:
-    """True si la fecha está en calendario de festivos activos o fin de semana según config."""
+def es_festivo(d: date, empresa_id: int | None) -> bool:
+    """True si la fecha está en calendario de festivos activos (por empresa) o fin de semana según config."""
     if current_app.config.get("FINES_DE_SEMANA_COMO_FESTIVO"):
         if d.weekday() >= 5:
             return True
-    existe = (
-        Festivo.query.filter_by(fecha=d, activo=True).first() is not None
-    )
+    q = Festivo.query.filter_by(fecha=d, activo=True)
+    if empresa_id is not None:
+        q = q.filter(Festivo.empresa_id == empresa_id)
+    existe = q.first() is not None
     return existe
 
 
@@ -160,8 +174,9 @@ def clasificar_dia(
 
     registros = obtener_registros_dia(empleado_id, dia)
     segmentos = construir_segmentos_trabajo(registros)
-    noche_ini, noche_fin = obtener_ventana_nocturna()
-    festivo = es_festivo(dia)
+    empresa_id = emp.empresa_id if emp is not None else None
+    noche_ini, noche_fin = obtener_ventana_nocturna(empresa_id)
+    festivo = es_festivo(dia, empresa_id)
 
     horas_totales = sum(duracion_horas(s.inicio, s.fin) for s in segmentos)
     horas_nocturnas = sum(

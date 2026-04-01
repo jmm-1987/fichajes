@@ -110,6 +110,7 @@ def calendario_simple():
 @roles_permitidos(
     RolUsuario.SUPERADMINISTRADOR,
     RolUsuario.ADMINISTRADOR_EMPRESA,
+    RolUsuario.RESPONSABLE,
 )
 def listado_admin():
     marcar_disfrutadas_pasadas()
@@ -119,9 +120,12 @@ def listado_admin():
     # Filtrar por empresa del usuario actual (salvo superadmin)
     if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
         emp_actual = getattr(current_user, "empleado", None)
-        if emp_actual:
+        empresa_id = getattr(current_user, "empresa_id", None)
+        if not empresa_id and emp_actual:
+            empresa_id = emp_actual.empresa_id
+        if empresa_id:
             pendientes_q = pendientes_q.join(Empleado).filter(
-                Empleado.empresa_id == emp_actual.empresa_id
+                Empleado.empresa_id == empresa_id
             )
     pendientes = pendientes_q.order_by(
         SolicitudVacaciones.solicitado_en.desc()
@@ -130,8 +134,11 @@ def listado_admin():
     emp_q = Empleado.query.filter_by(activo=True)
     if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
         emp_actual = getattr(current_user, "empleado", None)
-        if emp_actual:
-            emp_q = emp_q.filter(Empleado.empresa_id == emp_actual.empresa_id)
+        empresa_id = getattr(current_user, "empresa_id", None)
+        if not empresa_id and emp_actual:
+            empresa_id = emp_actual.empresa_id
+        if empresa_id:
+            emp_q = emp_q.filter(Empleado.empresa_id == empresa_id)
     form_manual.empleado_id.choices = [
         (e.id, e.nombre_completo) for e in emp_q.all()
     ]
@@ -178,6 +185,7 @@ def listado_admin():
 @roles_permitidos(
     RolUsuario.SUPERADMINISTRADOR,
     RolUsuario.ADMINISTRADOR_EMPRESA,
+    RolUsuario.RESPONSABLE,
 )
 def resolver(solicitud_id: int):
     sol = SolicitudVacaciones.query.get_or_404(solicitud_id)

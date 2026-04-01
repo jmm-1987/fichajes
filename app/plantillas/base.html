@@ -9,7 +9,7 @@
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 </head>
-<body class="cuerpo-app">
+<body class="cuerpo-app{% if current_user.is_authenticated and current_user.rol == 'superadministrador' %} cuerpo-superadmin{% endif %}">
   {% include 'componentes/_barra_superior.html' %}
   <div class="d-flex contenedor-principal">
     {% if current_user.is_authenticated %}

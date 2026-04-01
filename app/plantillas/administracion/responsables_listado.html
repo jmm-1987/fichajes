@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block titulo %}Responsables{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h3 text-azul-oscuro mt-3 mb-4">Responsables / managers</h1>
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Empresa</th>
+            <th>Activo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in responsables %}
+          <tr>
+            <td>{{ u.correo_electronico }}</td>
+            <td>{{ u.empresa.nombre if u.empresa else '—' }}</td>
+            <td>
+              {% if u.activo %}
+              <span class="badge bg-success">Activo</span>
+              {% else %}
+              <span class="badge bg-secondary">Inactivo</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-muted small">Sin responsables definidos.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
