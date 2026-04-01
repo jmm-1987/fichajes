@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio - Marisa Tovar{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="dashboard-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="dashboard-card">
+            <div class="card-icon">👥</div>
+            <h3>Clientes</h3>
+            <p>Gestiona tu base de datos de clientes</p>
+            <button class="btn btn-primary" onclick="mostrarPagina('clientes')">Clientes</button>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-icon">📋</div>
+            <h3>Presupuestos</h3>
+            <p>Crea y gestiona presupuestos para tus clientes</p>
+            <button class="btn btn-primary" onclick="mostrarPagina('presupuestos')">Presupuestos</button>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-icon">📦</div>
+            <h3>Albaranes</h3>
+            <p>Gestiona albaranes y conviértelos en facturas</p>
+            <button class="btn btn-primary" onclick="mostrarPagina('albaranes')">Albaranes</button>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-icon">🧾</div>
+            <h3>Facturas</h3>
+            <p>Gestiona tus facturas y convierte presupuestos</p>
+            <button class="btn btn-primary" onclick="mostrarPagina('facturas')">Facturas</button>
+        </div>
+    </div>
+    
+    <div class="dashboard-card dashboard-resumen" onclick="mostrarPagina('resumen')" style="cursor: pointer; margin-top: 1rem; width: 100%;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 2rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="card-icon" style="margin: 0; font-size: 2rem;">📊</div>
+                <div>
+                    <h3 style="margin: 0; text-align: left;">Resumen</h3>
+                    <p style="margin: 0.25rem 0 0 0; text-align: left;">Vista rápida de tu actividad</p>
+                </div>
+            </div>
+            <div class="stats" style="display: flex; flex-direction: row; gap: 2rem; margin: 0;">
+                <div class="stat-item">
+                    <span class="stat-label">Presupuestos:</span>
+                    <span class="stat-value" id="total-presupuestos">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Facturas:</span>
+                    <span class="stat-value" id="total-facturas">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    cargarResumen();
+});
+
+function cargarResumen() {
+    fetch('/api/presupuestos')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('total-presupuestos');
+            if (el) el.textContent = data.length;
+        });
+    
+    fetch('/api/facturas')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('total-facturas');
+            if (el) el.textContent = data.length;
+        });
+}
+</script>
+{% endblock %}
+

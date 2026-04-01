@@ -1,69 +1,198 @@
 {% extends 'base.html' %}
 {% block titulo %}Panel{% endblock %}
 {% block contenido %}
-{% from 'componentes/_tarjeta_estadistica.html' import tarjeta %}
 <div class="container-fluid px-3 pb-5">
-  <h1 class="h3 text-azul-oscuro mt-3 mb-4">Panel</h1>
+  <h1 class="h3 text-azul-oscuro mt-3 mb-4">Inicio</h1>
 
-  {% if es_admin_vista and datos_admin %}
-  <h2 class="h5 text-secondary mb-3">Administración</h2>
-  <div class="row g-3 mb-4">
-    {{ tarjeta('Empleados activos', datos_admin.empleados_activos) }}
-    {{ tarjeta('Fichajes hoy', datos_admin.fichajes_hoy) }}
-    {{ tarjeta('Jornadas incompletas hoy', datos_admin.jornadas_incompletas) }}
-    {{ tarjeta('Solicitudes corrección', datos_admin.incidencias_pendientes) }}
-    {{ tarjeta('Vacaciones por aprobar', datos_admin.vacaciones_pendientes) }}
+  {# Panel de manager / administración #}
+  {% if es_admin_vista and current_user.rol != 'empleado' and datos_admin %}
+  <div class="panel-grid-card mb-4">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
+            <div>
+              <h2 class="h6 text-azul-oscuro mb-1">Empleados</h2>
+              <p class="small text-muted mb-3">Gestiona tu base de empleados y roles.</p>
+            </div>
+            <div class="d-flex justify-content-between align-items-end">
+              <span class="small text-muted">Activos: {{ datos_admin.empleados_activos }}</span>
+              <a href="{{ url_for('empleados_bp.listado') }}" class="btn btn-acento btn-sm">Empleados</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
+            <div>
+              <h2 class="h6 text-azul-oscuro mb-1">Fichajes</h2>
+              <p class="small text-muted mb-3">Revisa y corrige fichajes de tu equipo.</p>
+            </div>
+            <div class="d-flex justify-content-between align-items-end">
+              <span class="small text-muted">Hoy: {{ datos_admin.fichajes_hoy }}</span>
+              <a href="{{ url_for('fichajes_bp.listado_admin') }}" class="btn btn-acento btn-sm">Fichajes</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
+            <div>
+              <h2 class="h6 text-azul-oscuro mb-1">Informes</h2>
+              <p class="small text-muted mb-3">Consulta informes de horas y jornadas.</p>
+            </div>
+            <div class="d-flex justify-content-between align-items-end">
+              <span class="small text-muted">Pend. incidencias: {{ datos_admin.incidencias_pendientes }}</span>
+              <a href="{{ url_for('informes_bp.indice') }}" class="btn btn-acento btn-sm">Informes</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
+            <div>
+              <h2 class="h6 text-azul-oscuro mb-1">Vacaciones</h2>
+              <p class="small text-muted mb-3">Aprueba o revisa solicitudes de vacaciones.</p>
+            </div>
+            <div class="d-flex justify-content-between align-items-end">
+              <span class="small text-muted">Pendientes: {{ datos_admin.vacaciones_pendientes }}</span>
+              <a href="{{ url_for('vacaciones_bp.listado_admin') }}" class="btn btn-acento btn-sm">Vacaciones</a>
+            </div>
+          </div>
+        </div>
+        {% if current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
+        <div class="col-md-3">
+          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
+            <div>
+              <h2 class="h6 text-azul-oscuro mb-1">Config. laboral</h2>
+              <p class="small text-muted mb-3">Ajusta reglas laborales de tu empresa.</p>
+            </div>
+            <div class="d-flex justify-content-end align-items-end">
+              <a href="{{ url_for('administracion_bp.configuracion_laboral_empresa') }}" class="btn btn-acento btn-sm">Configuración</a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
   </div>
-  <div class="d-flex flex-wrap gap-2 mb-5">
-    <a class="btn btn-outline-primary" href="{{ url_for('empleados_bp.listado') }}">Empleados</a>
-    <a class="btn btn-outline-primary" href="{{ url_for('fichajes_bp.listado_admin') }}">Fichajes</a>
-    <a class="btn btn-outline-primary" href="{{ url_for('informes_bp.indice') }}">Informes</a>
-    {% if current_user.rol in ['superadministrador','administrador_empresa'] %}
-    <a class="btn btn-outline-primary" href="{{ url_for('vacaciones_bp.listado_admin') }}">Vacaciones</a>
-    {% endif %}
+
+  <div class="panel-grid-card mt-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <h2 class="h6 text-azul-oscuro mb-1">Equipo</h2>
+          <p class="small text-muted mb-0">
+            Jornadas incompletas hoy: {{ datos_admin.jornadas_incompletas }}
+          </p>
+        </div>
+        <div class="btn-group btn-group-sm" role="group">
+          <a href="{{ url_for('inicio_bp.panel', vista='dia') }}" class="btn {% if vista_equipo == 'dia' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Hoy</a>
+          <a href="{{ url_for('inicio_bp.panel', vista='semana') }}" class="btn {% if vista_equipo == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Semana</a>
+          <a href="{{ url_for('inicio_bp.panel', vista='mes') }}" class="btn {% if vista_equipo == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Mes</a>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Empleado</th>
+              <th>Empresa</th>
+              <th>Estado</th>
+              <th class="text-end">Horas {{ 'hoy' if vista_equipo == 'dia' else ('semana' if vista_equipo == 'semana' else 'mes') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in resumen_equipo %}
+            <tr>
+              <td>{{ e.nombre }}</td>
+              <td>{{ e.empresa or '—' }}</td>
+              <td>
+                {% if e.dentro %}
+                <span class="badge bg-success">Trabajando</span>
+                {% else %}
+                <span class="badge bg-secondary">Fuera</span>
+                {% endif %}
+              </td>
+              <td class="text-end">{{ e.horas }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-muted small">Sin empleados activos.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
   {% endif %}
 
-  {% if datos_empleado %}
-  <h2 class="h5 text-secondary mb-3">Mi jornada</h2>
-  <div class="row g-3">
-    <div class="col-md-6 col-xl-4">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="small text-muted mb-1">Estado</p>
-          <p class="h4 mb-0">
-            {% if datos_empleado.dentro %}
-            <span class="badge bg-success">Dentro</span>
-            {% else %}
-            <span class="badge bg-secondary">Fuera</span>
+  {# Panel de empleado (solo para usuarios con rol empleado) #}
+  {% if datos_empleado and current_user.rol == 'empleado' %}
+  <div class="mt-4">
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
+          <div>
+            <h2 class="h6 text-azul-oscuro mb-1">Fichar</h2>
+            <p class="small text-muted mb-3">Registra tus entradas y salidas.</p>
+          </div>
+          <a href="{{ url_for('fichajes_bp.portal_empleado') }}" class="btn btn-acento btn-sm">Ir a fichar</a>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
+          <div>
+            <h2 class="h6 text-azul-oscuro mb-1">Mi historial</h2>
+            <p class="small text-muted mb-3">Consulta tus fichajes recientes.</p>
+          </div>
+          <a href="{{ url_for('fichajes_bp.historial_empleado') }}" class="btn btn-acento btn-sm">Ver historial</a>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
+          <div>
+            <h2 class="h6 text-azul-oscuro mb-1">Vacaciones</h2>
+            <p class="small text-muted mb-3">Revisa y solicita vacaciones.</p>
+          </div>
+          <a href="{{ url_for('vacaciones_bp.mis_vacaciones') }}" class="btn btn-acento btn-sm">Mis vacaciones</a>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
+          <div>
+            <h2 class="h6 text-azul-oscuro mb-1">Mi ficha</h2>
+            <p class="small text-muted mb-3">Datos básicos de tu ficha de empleado.</p>
+          </div>
+          <a href="{{ url_for('empleados_bp.mi_ficha') }}" class="btn btn-acento btn-sm">Ver ficha</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 text-azul-oscuro mb-2">Resumen de jornada</h2>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <p class="small text-muted mb-1">Estado</p>
+            <p class="h5 mb-0">
+              {% if datos_empleado.dentro %}
+              <span class="badge bg-success">Dentro</span>
+              {% else %}
+              <span class="badge bg-secondary">Fuera</span>
+              {% endif %}
+            </p>
+            {% if datos_empleado.ultimo_fichaje %}
+            <p class="small mt-2 mb-0">Último: {{ datos_empleado.ultimo_fichaje.tipo_registro }} · {{ datos_empleado.ultimo_fichaje.fecha_hora_servidor|fecha_hora_es(false) }}</p>
             {% endif %}
-          </p>
-          {% if datos_empleado.ultimo_fichaje %}
-          <p class="small mt-2 mb-0">Último: {{ datos_empleado.ultimo_fichaje.tipo_registro }} · {{ datos_empleado.ultimo_fichaje.fecha_hora_servidor|fecha_hora_es(false) }}</p>
-          {% endif %}
+          </div>
+          <div class="col-md-4">
+            <p class="small text-muted mb-1">Horas hoy</p>
+            <p class="h4 text-azul-oscuro mb-0">{{ datos_empleado.horas_hoy }}</p>
+          </div>
+          <div class="col-md-4">
+            <p class="small text-muted mb-1">Horas esta semana</p>
+            <p class="h4 text-azul-oscuro mb-0">{{ datos_empleado.horas_semana }}</p>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-md-6 col-xl-4">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="small text-muted mb-1">Horas hoy</p>
-          <p class="display-6 text-azul-oscuro mb-0">{{ datos_empleado.horas_hoy }}</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6 col-xl-4">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="small text-muted mb-1">Horas esta semana</p>
-          <p class="display-6 text-azul-oscuro mb-0">{{ datos_empleado.horas_semana }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="mt-4 d-grid d-md-block gap-2">
-    <a class="btn btn-acento btn-lg px-5" href="{{ url_for('fichajes_bp.portal_empleado') }}">Ir a fichar</a>
-    <a class="btn btn-outline-dark" href="{{ url_for('fichajes_bp.solicitar_correccion') }}">Solicitar corrección</a>
   </div>
   {% endif %}
 </div>

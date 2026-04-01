@@ -5,6 +5,7 @@ from flask import Flask, render_template
 from configuracion import Configuracion, ConfiguracionPruebas
 from app.extensiones import csrf, db, login_manager, migrate
 from app.modelos import Usuario
+from app.semillas import cargar_datos_demostracion
 
 
 def crear_aplicacion(config_class=Configuracion) -> Flask:
@@ -42,6 +43,13 @@ def crear_aplicacion(config_class=Configuracion) -> Flask:
 
     with aplicacion_flask.app_context():
         import app.modelos  # noqa: F401 — modelos para migraciones
+
+        # Inicialización automática de la base de datos y datos demo
+        # para despliegues sencillos (primer arranque / entornos SQLite).
+        uri_bd = aplicacion_flask.config.get("SQLALCHEMY_DATABASE_URI", "")
+        if uri_bd.startswith("sqlite:///"):
+            db.create_all()
+            cargar_datos_demostracion()
 
     if aplicacion_flask.config.get("DETRAS_DE_PROXY"):
         from werkzeug.middleware.proxy_fix import ProxyFix

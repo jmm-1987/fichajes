@@ -1,18 +1,19 @@
-/* Variables y tema premium (blanco, azul oscuro, negro) */
+/* Variables y tema tipo app SaaS (fondos claros, acento azul) */
 :root {
-  --jm-azul-oscuro: #0d1b2a;
-  --jm-azul-medio: #1b3a5c;
-  --jm-negro: #0a0a0a;
-  --jm-fondo: #f4f6f8;
+  --jm-azul-oscuro: #1b3a5c;
+  --jm-azul-medio: #2563eb;
+  --jm-azul-claro: #e5efff;
+  --jm-negro: #111827;
+  --jm-fondo: #f5f7fb;
   --jm-blanco: #ffffff;
-  --jm-borde: #e2e6ea;
-  --jm-sombra: 0 8px 24px rgba(13, 27, 42, 0.08);
-  --jm-radio: 12px;
+  --jm-borde: #e5e7eb;
+  --jm-sombra: 0 12px 30px rgba(15, 23, 42, 0.08);
+  --jm-radio: 16px;
 }
 
 .cuerpo-app {
   min-height: 100vh;
-  background: var(--jm-fondo);
+  background: #ffffff;
   color: var(--jm-negro);
   padding-bottom: 4.5rem;
 }
@@ -28,18 +29,24 @@
 }
 
 .barra-superior {
-  background: linear-gradient(90deg, var(--jm-azul-oscuro), var(--jm-azul-medio));
-  color: var(--jm-blanco);
+  background: #ffffff;
+  border-bottom: 2px solid #000000;
+  color: var(--jm-negro);
 }
 
 .marca-texto {
+  font-family: "Cormorant Garamond", Georgia, serif;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--jm-blanco);
+  letter-spacing: 0.08em;
+  color: var(--jm-negro);
+  padding: 0.35rem 0.9rem;
+  border-radius: 6px;
+  border: 2px solid #000000;
+  background: #f5f5f5;
 }
 
 .marca-icono {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   opacity: 0.9;
 }
 
@@ -69,25 +76,39 @@
 }
 
 .btn-acento {
-  background: var(--jm-azul-oscuro);
-  border: none;
-  color: var(--jm-blanco);
-  border-radius: var(--jm-radio);
+  background: #2563eb;
+  border: 2px solid #000000;
+  color: #ffffff;
+  border-radius: 6px;
   font-weight: 600;
+  box-shadow: 4px 4px 0px #000000;
 }
 
 .btn-acento:hover {
-  background: var(--jm-azul-medio);
-  color: var(--jm-blanco);
+  background: #1e40af;
+  color: #ffffff;
+  transform: translateY(2px);
+  box-shadow: 2px 2px 0px #000000;
 }
 
 .tarjeta-estadistica {
   border-radius: var(--jm-radio);
   box-shadow: var(--jm-sombra);
+  border: 1px solid #e5e7eb;
+  background: var(--jm-blanco);
 }
 
 .card {
   border-radius: var(--jm-radio);
+  border-color: var(--jm-borde);
+  box-shadow: var(--jm-sombra);
+}
+
+.panel-grid-card {
+  border-radius: var(--jm-radio);
+  border: 1px solid var(--jm-borde);
+  background: var(--jm-blanco);
+  box-shadow: var(--jm-sombra);
 }
 
 .table {
@@ -123,4 +144,72 @@
 
 .celda-plan .form-celda-plan {
   min-width: 88px;
+}
+
+/* Dropdown de ayuda compacto (tipo "¿Necesitas ayuda?") */
+.hidden {
+  display: none !important;
+}
+
+.ayuda-dropdown {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  margin-top: 0.25rem;
+  z-index: 1100;
+  min-width: 260px;
+  max-width: 280px;
+}
+
+.ayuda-dropdown-content {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 4px 4px 0px #000000;
+  border: 2px solid #000000;
+  overflow: hidden;
+}
+
+.ayuda-header {
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 2px solid #000000;
+}
+
+.ayuda-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.ayuda-body {
+  padding: 0.9rem;
+  text-align: center;
+}
+
+.logo-ayuda-small {
+  max-width: 120px;
+  margin-bottom: 0.75rem;
+}
+
+.ayuda-contacto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contacto-item-small {
+  padding: 0.5rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.contacto-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.contacto-link:hover {
+  text-decoration: underline;
 }

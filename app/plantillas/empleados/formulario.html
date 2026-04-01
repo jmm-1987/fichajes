@@ -10,6 +10,9 @@
         <div class="col-md-6">{{ formulario.correo_electronico.label(class="form-label") }}{{ formulario.correo_electronico(class="form-control") }}</div>
         <div class="col-md-6">{{ formulario.contrasena.label(class="form-label") }}{{ formulario.contrasena(class="form-control", placeholder='Mín. 8 caracteres si es alta') }}</div>
         <div class="col-md-6">{{ formulario.codigo_empleado.label(class="form-label") }}{{ formulario.codigo_empleado(class="form-control") }}</div>
+        {% if formulario.empresa_id is defined %}
+        <div class="col-md-6">{{ formulario.empresa_id.label(class="form-label") }}{{ formulario.empresa_id(class="form-select") }}</div>
+        {% endif %}
         <div class="col-md-6">{{ formulario.rol.label(class="form-label") }}{{ formulario.rol(class="form-select") }}</div>
         <div class="col-md-6">{{ formulario.nombre.label(class="form-label") }}{{ formulario.nombre(class="form-control") }}</div>
         <div class="col-md-6">{{ formulario.apellidos.label(class="form-label") }}{{ formulario.apellidos(class="form-control") }}</div>

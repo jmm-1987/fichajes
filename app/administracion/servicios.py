@@ -32,3 +32,21 @@ def activar_configuracion_nocturna(hora_inicio, hora_fin) -> ConfiguracionHorasN
     db.session.add(nueva)
     db.session.commit()
     return nueva
+
+
+def obtener_config_empresa(
+    empresa_id: int, clave: str, valor_defecto: str, tipo: str = "texto"
+) -> ConfiguracionAplicacion:
+    """
+    Configuración laboral por empresa: clave namespaced por empresa.
+    """
+    clave_real = f"empresa:{empresa_id}:{clave}"
+    return obtener_o_crear_config(clave_real, valor_defecto, tipo=tipo)
+
+
+def establecer_config_empresa(empresa_id: int, clave: str, valor: str) -> None:
+    """
+    Guarda configuración laboral para una empresa concreta.
+    """
+    clave_real = f"empresa:{empresa_id}:{clave}"
+    establecer_config(clave_real, valor)

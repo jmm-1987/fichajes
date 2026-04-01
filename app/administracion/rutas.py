@@ -1,17 +1,23 @@
 """Pantallas de configuración para RRHH y superadmin."""
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app.administracion.formularios import (
     FormularioFestivo,
     FormularioHorasNocturnas,
+    FormularioManagerEmpresa,
     FormularioParametrosLaborales,
 )
-from app.administracion.servicios import activar_configuracion_nocturna, establecer_config
+from app.administracion.servicios import (
+    activar_configuracion_nocturna,
+    establecer_config,
+    establecer_config_empresa,
+    obtener_config_empresa,
+)
 from app.constantes import RolUsuario
 from app.extensiones import db
-from app.modelos import ConfiguracionHorasNocturnas, Empresa, Festivo
+from app.modelos import ConfiguracionHorasNocturnas, Empresa, Festivo, Usuario
 from app.utilidades.predicados import roles_permitidos
 
 administracion_bp = Blueprint(
@@ -26,7 +32,6 @@ administracion_bp = Blueprint(
 @login_required
 @roles_permitidos(
     RolUsuario.SUPERADMINISTRADOR,
-    RolUsuario.ADMINISTRADOR_EMPRESA,
 )
 def configuracion_laboral():
     form_noche = FormularioHorasNocturnas(prefix="noche")
@@ -98,6 +103,76 @@ def configuracion_laboral():
     )
 
 
+@administracion_bp.route("/laboral/mi-empresa", methods=["GET", "POST"])
+@login_required
+@roles_permitidos(
+    RolUsuario.SUPERADMINISTRADOR,
+    RolUsuario.ADMINISTRADOR_EMPRESA,
+    RolUsuario.RESPONSABLE,
+)
+def configuracion_laboral_empresa():
+    """
+    Configuración laboral específica por empresa.
+    - Administrador de empresa: siempre su propia empresa.
+    - Superadmin: debe venir empresa_id en querystring.
+    """
+    empresa_id = None
+    if current_user.rol in (RolUsuario.ADMINISTRADOR_EMPRESA, RolUsuario.RESPONSABLE):
+        emp_actual = getattr(current_user, "empleado", None)
+        if not emp_actual or not emp_actual.empresa_id:
+            flash("No hay empresa asociada al usuario actual.", "peligro")
+            return redirect(url_for("inicio_bp.panel"))
+        empresa_id = emp_actual.empresa_id
+    else:
+        empresa_id = request.args.get("empresa_id", type=int)
+        if not empresa_id:
+            flash("Seleccione una empresa desde el listado para configurar.", "aviso")
+            return redirect(url_for("administracion_bp.listado_empresas"))
+
+    empresa = Empresa.query.get_or_404(empresa_id)
+    form_params = FormularioParametrosLaborales(prefix="par")
+
+    if request.method == "GET":
+        cfg_fs = obtener_config_empresa(empresa_id, "fines_semana_festivo", "0")
+        cfg_tol = obtener_config_empresa(empresa_id, "tolerancia_fichaje_minutos", "5")
+        cfg_jornada = obtener_config_empresa(
+            empresa_id, "jornada_teorica_horas_dia", "8.0"
+        )
+        form_params.fines_de_semana_festivo.data = cfg_fs.valor == "1"
+        form_params.tolerancia_minutos.data = cfg_tol.valor
+        form_params.jornada_teorica_dia.data = cfg_jornada.valor
+
+    if request.method == "POST" and form_params.validate_on_submit():
+        establecer_config_empresa(
+            empresa_id,
+            "fines_semana_festivo",
+            "1" if form_params.fines_de_semana_festivo.data else "0",
+        )
+        if form_params.tolerancia_minutos.data:
+            establecer_config_empresa(
+                empresa_id,
+                "tolerancia_fichaje_minutos",
+                form_params.tolerancia_minutos.data.strip(),
+            )
+        if form_params.jornada_teorica_dia.data:
+            establecer_config_empresa(
+                empresa_id,
+                "jornada_teorica_horas_dia",
+                form_params.jornada_teorica_dia.data.strip(),
+            )
+        flash(
+            f"Configuración laboral guardada para {empresa.nombre}.",
+            "exito",
+        )
+        return redirect(url_for("administracion_bp.configuracion_laboral_empresa"))
+
+    return render_template(
+        "laboral_empresa.html",
+        form_params=form_params,
+        empresa=empresa,
+    )
+
+
 @administracion_bp.route("/empresas")
 @login_required
 @roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
@@ -134,3 +209,36 @@ def toggle_activa_empresa(empresa_id: int):
     db.session.commit()
     flash("Estado de la empresa actualizado.", "exito")
     return redirect(url_for("administracion_bp.listado_empresas"))
+
+
+@administracion_bp.route("/empresas/<int:empresa_id>/manager", methods=["GET", "POST"])
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def crear_manager_empresa(empresa_id: int):
+    """Crea un usuario manager (rol responsable) ligado a una empresa, sin ficha de empleado."""
+    empresa = Empresa.query.get_or_404(empresa_id)
+    form = FormularioManagerEmpresa()
+
+    if form.validate_on_submit():
+        correo = (form.correo_electronico.data or "").strip().lower()
+        existe = Usuario.query.filter_by(correo_electronico=correo).first()
+        if existe:
+            flash("Ya existe un usuario con ese identificador.", "peligro")
+        else:
+            u = Usuario(
+                correo_electronico=correo,
+                rol=RolUsuario.RESPONSABLE,
+                activo=True,
+                empresa_id=empresa.id,
+            )
+            u.establecer_contrasena(form.contrasena.data)
+            db.session.add(u)
+            db.session.commit()
+            flash(f"Manager creado para {empresa.nombre}.", "exito")
+            return redirect(url_for("administracion_bp.listado_empresas"))
+
+    return render_template(
+        "manager_empresa_form.html",
+        formulario=form,
+        empresa=empresa,
+    )

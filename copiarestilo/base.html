@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Facturación Fácil{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <span class="tu-logo-texto">Marisa Tovar Bermudez</span>
+            </div>
+            <div class="nav-menu">
+                <div class="nav-menu-items">
+                    <a href="/" class="nav-link active" data-page="inicio">Inicio</a>
+                    <a href="#" class="nav-link" data-page="clientes">Clientes</a>
+                    <a href="#" class="nav-link" data-page="presupuestos">Presupuestos</a>
+                    <a href="#" class="nav-link" data-page="albaranes">Albaranes</a>
+                    <a href="#" class="nav-link" data-page="facturas">Facturas</a>
+                    <div class="nav-dropdown">
+                        <a href="#" class="nav-link nav-link-dropdown" onclick="toggleGastosDropdown(event)">Gastos <span style="font-size: 0.7em; margin-left: 0.25em;">▼</span></a>
+                        <div id="gastos-dropdown" class="nav-dropdown-content hidden">
+                            <a href="#" class="nav-link nav-link-gasto" data-page="proveedores">Proveedores</a>
+                            <a href="#" class="nav-link nav-link-gasto" data-page="facturas-gasto">Facturas de Compra</a>
+                        </div>
+                    </div>
+                    <a href="#" class="nav-link nav-link-icon" data-page="configuracion" title="Configuración">⚙️</a>
+                </div>
+            </div>
+            <div class="nav-right">
+                <a href="{{ url_for('logout') }}" class="nav-link nav-logout" title="Cerrar sesión">Salir</a>
+                <div class="logos-right">
+                    <img src="{{ url_for('static', filename='img/logo-verifacto.png') }}" alt="Verifacto" class="logo logo-verifacto">
+                    <div class="logo-container">
+                        <img src="{{ url_for('static', filename='img/logo-jm.png') }}" alt="JM" class="logo logo-right" onclick="toggleAyuda()" style="cursor: pointer;">
+                        <div id="ayuda-dropdown" class="ayuda-dropdown hidden">
+                            <div class="ayuda-dropdown-content">
+                                <div class="ayuda-header">
+                                    <h3>¿Necesitas ayuda?</h3>
+                                </div>
+                                <div class="ayuda-body">
+                                    <img src="{{ url_for('static', filename='img/logo-jm-completo.png') }}" alt="JM Logo" class="logo-ayuda-small">
+                                    <div class="ayuda-contacto">
+                                        <div class="contacto-item-small">
+                                            <strong>Email:</strong><br>
+                                            <a href="mailto:jomma.tech@gmail.com" class="contacto-link">jomma.tech@gmail.com</a>
+                                        </div>
+                                        <div class="contacto-item-small">
+                                            <strong>Teléfono:</strong><br>
+                                            <a href="tel:625433667" class="contacto-link">625 433 667</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Modales globales que siempre deben estar disponibles -->
+    <div id="modal-presupuesto" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nuevo Presupuesto</h2>
+                <button class="btn-close" onclick="cerrarModal('modal-presupuesto')">&times;</button>
+            </div>
+            <div id="form-presupuesto"></div>
+        </div>
+    </div>
+
+    <div id="modal-factura" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nueva Factura</h2>
+                <button class="btn-close" onclick="cerrarModal('modal-factura')">&times;</button>
+            </div>
+            <div id="form-factura"></div>
+        </div>
+    </div>
+
+    <div id="modal-albaran" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nuevo Albarán</h2>
+                <button class="btn-close" onclick="cerrarModal('modal-albaran')">&times;</button>
+            </div>
+            <div id="form-albaran"></div>
+        </div>
+    </div>
+
+    <div id="modal-factura-gasto" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nueva Factura de Gasto</h2>
+                <button class="btn-close" onclick="cerrarModal('modal-factura-gasto')">&times;</button>
+            </div>
+            <div id="form-factura-gasto"></div>
+        </div>
+    </div>
+
+    <div id="modal-proveedor" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nuevo Proveedor</h2>
+                <button class="btn-close" onclick="cerrarModal('modal-proveedor')">&times;</button>
+            </div>
+            <form id="form-nuevo-proveedor" onsubmit="guardarProveedor(event)">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" class="form-control" id="proveedor-nombre" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>NIF</label>
+                        <input type="text" class="form-control" id="proveedor-nif">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" class="form-control" id="proveedor-telefono">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" class="form-control" id="proveedor-email">
+                </div>
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <textarea class="form-control" id="proveedor-direccion" rows="3"></textarea>
+                </div>
+                <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-proveedor')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Proveedor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-cliente" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nuevo Cliente</h2>
+                <button class="btn-close" onclick="cerrarModal('modal-cliente')">&times;</button>
+            </div>
+            <form id="form-nuevo-cliente" onsubmit="guardarCliente(event)">
+                <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" class="form-control" id="cliente-nombre" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>NIF</label>
+                        <input type="text" class="form-control" id="cliente-nif">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" class="form-control" id="cliente-telefono">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" class="form-control" id="cliente-email">
+                </div>
+                <div class="form-group">
+                    <label>Forma de pago</label>
+                    <input type="text" class="form-control" id="cliente-forma-pago" placeholder="Ej. Transferencia, Contado, 30 días...">
+                </div>
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <textarea class="form-control" id="cliente-direccion" rows="3"></textarea>
+                </div>
+                <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-cliente')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

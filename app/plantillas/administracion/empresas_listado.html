@@ -10,6 +10,7 @@
         <div class="card-body">
           <h2 class="h6">Nueva empresa</h2>
           <form method="post" action="{{ url_for('administracion_bp.crear_empresa_rapida') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-2">
               <label for="nombre" class="form-label">Nombre</label>
               <input type="text" name="nombre" id="nombre" class="form-control" required />
@@ -31,6 +32,8 @@
                 <th>CIF</th>
                 <th>Activa</th>
                 <th></th>
+                <th></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -48,10 +51,22 @@
                 </td>
                 <td class="text-end">
                   <form method="post" action="{{ url_for('administracion_bp.toggle_activa_empresa', empresa_id=e.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-outline-secondary btn-sm">
                       {% if e.activa %}Desactivar{% else %}Activar{% endif %}
                     </button>
                   </form>
+                </td>
+                <td class="text-end">
+                  <a href="{{ url_for('administracion_bp.configuracion_laboral_empresa', empresa_id=e.id) }}" class="btn btn-outline-primary btn-sm">
+                    Config. laboral
+                  </a>
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm" role="group">
+                    <a href="{{ url_for('administracion_bp.crear_manager_empresa', empresa_id=e.id) }}" class="btn btn-acento btn-sm">Manager</a>
+                    <a href="{{ url_for('empleados_bp.nuevo', empresa_id=e.id, rol='empleado') }}" class="btn btn-acento btn-sm">Empleado</a>
+                  </div>
                 </td>
               </tr>
               {% else %}

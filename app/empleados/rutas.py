@@ -11,7 +11,7 @@ from app.empleados.servicios import (
     resumen_mes_actual,
     vacaciones_resumen,
 )
-from app.modelos import Empleado, RegistroJornada, SolicitudCorreccion
+from app.modelos import Empleado, Empresa, RegistroJornada, SolicitudCorreccion
 from app.utilidades.predicados import (
     es_superadministrador,
     obtener_id_empleado_actual,
@@ -75,6 +75,22 @@ def nuevo():
     )
     formulario = ClaseForm()
     formulario.responsable_id.choices = _choices_responsables()
+    if es_superadministrador() and hasattr(formulario, "empresa_id"):
+        formulario.empresa_id.choices = [
+            (e.id, e.nombre) for e in Empresa.query.order_by(Empresa.nombre).all()
+        ]
+        empresa_pref = request.args.get("empresa_id", type=int)
+        if empresa_pref:
+            formulario.empresa_id.data = empresa_pref
+
+    rol_pref = request.args.get("rol")
+    if rol_pref in [
+        RolUsuario.EMPLEADO,
+        RolUsuario.RESPONSABLE,
+        RolUsuario.ADMINISTRADOR_EMPRESA,
+        RolUsuario.SUPERADMINISTRADOR,
+    ]:
+        formulario.rol.data = rol_pref
 
     if formulario.validate_on_submit():
         try:
@@ -100,6 +116,8 @@ def nuevo():
             }
             if formulario.responsable_id.data == 0:
                 datos["responsable_id"] = None
+            if es_superadministrador() and hasattr(formulario, "empresa_id"):
+                datos["empresa_id"] = formulario.empresa_id.data
             crear_empleado_con_usuario(
                 datos,
                 formulario.contrasena.data,
@@ -166,10 +184,16 @@ def editar(empleado_id: int):
     formulario.correo_electronico.data = emp.usuario.correo_electronico
     formulario.rol.data = emp.usuario.rol
     formulario.responsable_id.choices = _choices_responsables(excluir_id=emp.id)
+    if es_superadministrador() and hasattr(formulario, "empresa_id"):
+        formulario.empresa_id.choices = [
+            (e.id, e.nombre) for e in Empresa.query.order_by(Empresa.nombre).all()
+        ]
 
     if request.method == "GET":
         formulario.saldo_vacaciones.data = emp.saldo_vacaciones
         formulario.responsable_id.data = emp.responsable_id or 0
+        if es_superadministrador() and hasattr(formulario, "empresa_id"):
+            formulario.empresa_id.data = emp.empresa_id
 
     if formulario.validate_on_submit():
         datos = {
@@ -194,6 +218,8 @@ def editar(empleado_id: int):
         }
         if formulario.responsable_id.data == 0:
             datos["responsable_id"] = None
+        if es_superadministrador() and hasattr(formulario, "empresa_id"):
+            datos["empresa_id"] = formulario.empresa_id.data
         pwd = (formulario.contrasena.data or "").strip() or None
         actualizar_empleado(emp, datos, pwd)
         flash("Cambios guardados.", "exito")

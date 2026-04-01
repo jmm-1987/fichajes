@@ -68,7 +68,6 @@ class FormularioEmpleado(FlaskForm):
         choices=[
             ("empleado", "Empleado"),
             ("responsable", "Responsable / mánager"),
-            ("administrador_empresa", "Administrador empresa / RRHH"),
         ],
         validators=[DataRequired()],
     )
@@ -78,12 +77,16 @@ class FormularioEmpleado(FlaskForm):
 class FormularioEmpleadoSuperadmin(FormularioEmpleado):
     """Permite asignar superadministrador (solo superadmin)."""
 
+    empresa_id = SelectField(
+        "Empresa",
+        coerce=int,
+        validators=[DataRequired()],
+    )
     rol = SelectField(
         "Rol de acceso",
         choices=[
             ("empleado", "Empleado"),
             ("responsable", "Responsable / mánager"),
-            ("administrador_empresa", "Administrador empresa / RRHH"),
             ("superadministrador", "Superadministrador"),
         ],
         validators=[DataRequired()],

@@ -1,15 +1,20 @@
 <nav class="nav flex-column gap-1 p-3">
   <a class="nav-link" href="{{ url_for('inicio_bp.panel') }}">Panel</a>
   {% if current_user.is_authenticated and current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
+  {% if current_user.rol == 'superadministrador' %}
+  <a class="nav-link" href="{{ url_for('administracion_bp.listado_empresas') }}">Empresas</a>
+  {% endif %}
   <a class="nav-link" href="{{ url_for('empleados_bp.listado') }}">Empleados</a>
   <a class="nav-link" href="{{ url_for('fichajes_bp.listado_admin') }}">Fichajes</a>
+  {% if current_user.rol != 'superadministrador' %}
   <a class="nav-link" href="{{ url_for('informes_bp.indice') }}">Informes</a>
   {% endif %}
-  {% if current_user.is_authenticated and current_user.rol in ['superadministrador','administrador_empresa'] %}
-  <a class="nav-link" href="{{ url_for('vacaciones_bp.listado_admin') }}">Vacaciones (admin)</a>
-  <a class="nav-link" href="{{ url_for('administracion_bp.configuracion_laboral') }}">Configuración laboral</a>
   {% endif %}
-  {% if current_user.is_authenticated and current_user.empleado %}
+  {% if current_user.is_authenticated and current_user.rol in ['administrador_empresa','responsable'] %}
+  <a class="nav-link" href="{{ url_for('vacaciones_bp.listado_admin') }}">Vacaciones (admin)</a>
+  <a class="nav-link" href="{{ url_for('administracion_bp.configuracion_laboral_empresa') }}">Configuración laboral empresa</a>
+  {% endif %}
+  {% if current_user.is_authenticated and current_user.rol == 'empleado' and current_user.empleado %}
   <a class="nav-link" href="{{ url_for('fichajes_bp.portal_empleado') }}">Fichar</a>
   <a class="nav-link" href="{{ url_for('fichajes_bp.historial_empleado') }}">Mi historial</a>
   <a class="nav-link" href="{{ url_for('vacaciones_bp.mis_vacaciones') }}">Mis vacaciones</a>
