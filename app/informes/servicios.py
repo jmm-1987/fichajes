@@ -1,13 +1,82 @@
 """Consultas y agregados para informes."""
 
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Iterator, List, Optional
 
-from app.constantes import EstadoRegistroJornada
+from app.constantes import EstadoRegistroJornada, TipoClasificacionDiaLaboral
 from app.extensiones import db
 from app.fichajes.calculos import clasificar_dia, calcular_resumen_periodo
 from app.modelos import Empleado, RegistroJornada
+
+
+def etiqueta_estado_dia_laboral(estado: str) -> str:
+    """Una sola etiqueta legible (misma lógica que el calendario)."""
+    m = {
+        "trabajado": "Trabajando",
+        "vacaciones": "Vacaciones",
+        TipoClasificacionDiaLaboral.LIBRE: "Libre",
+        TipoClasificacionDiaLaboral.AUSENCIA_JUSTIFICADA: "Ausencia justif.",
+        TipoClasificacionDiaLaboral.AUSENCIA_NO_JUSTIFICADA: "Ausencia no justif.",
+        "pendiente": "Pendiente",
+        "no_laborable": "No laborable",
+    }
+    return m.get(estado, estado)
+
+
+def resumen_tipos_dia_periodo(
+    empleado_id: int, fecha_inicio: date, fecha_fin: date
+) -> str:
+    """
+    Texto breve para la columna «Tipo día»:
+
+    - **Un solo día** en el informe: una etiqueta (p. ej. «Trabajando», «Libre»).
+    - **Varios días**: conteo por tipo en todo el periodo (incluye marcas manuales
+      como libre en un día concreto); como mucho tres categorías y «…» si hay más.
+
+    No se usa solo «hoy» en rangos largos: si no, se ocultarían días marcados
+    como libre u otros en el mismo periodo.
+    """
+    from app.empleados.calendario_servicios import (
+        mapa_clasificaciones_manual_rango,
+        resolver_estado_dia_laboral,
+    )
+
+    manual_map = mapa_clasificaciones_manual_rango(
+        [empleado_id], fecha_inicio, fecha_fin
+    )
+
+    if fecha_inicio == fecha_fin:
+        cls = manual_map.get((empleado_id, fecha_inicio))
+        r = resolver_estado_dia_laboral(empleado_id, fecha_inicio, manual=cls)
+        return etiqueta_estado_dia_laboral(r["estado"])
+
+    conteo: Counter[str] = Counter()
+    d = fecha_inicio
+    while d <= fecha_fin:
+        cls = manual_map.get((empleado_id, d))
+        r = resolver_estado_dia_laboral(empleado_id, d, manual=cls)
+        conteo[r["estado"]] += 1
+        d += timedelta(days=1)
+
+    orden = [
+        ("trabajado", "Trabajo"),
+        ("vacaciones", "Vacaciones"),
+        (TipoClasificacionDiaLaboral.LIBRE, "Libre"),
+        (TipoClasificacionDiaLaboral.AUSENCIA_JUSTIFICADA, "Ausencia justif."),
+        (TipoClasificacionDiaLaboral.AUSENCIA_NO_JUSTIFICADA, "Ausencia no justif."),
+        ("pendiente", "Pendiente"),
+        ("no_laborable", "No laborable"),
+    ]
+    partes: List[str] = []
+    for clave, etiqueta in orden:
+        n = conteo.get(clave, 0)
+        if n:
+            partes.append(f"{etiqueta} {n}")
+    if len(partes) > 3:
+        return " · ".join(partes[:3]) + " · …"
+    return " · ".join(partes) if partes else "—"
 
 
 @dataclass
@@ -62,6 +131,7 @@ def iterar_filas_detalle(
     d = fecha_inicio
     while d <= fecha_fin:
         det = clasificar_dia(empleado_id, d)
+        det["fecha_dia"] = d
         regs = (
             RegistroJornada.query.filter(
                 RegistroJornada.empleado_id == empleado_id,
@@ -110,6 +180,9 @@ def construir_informe_empleado(f: FiltrosInforme) -> List[dict]:
                 "empleado": emp,
                 "resumen": resumen,
                 "detalle": detalle,
+                "resumen_tipos_dia": resumen_tipos_dia_periodo(
+                    emp.id, f.fecha_inicio, f.fecha_fin
+                ),
             }
         )
     return filas

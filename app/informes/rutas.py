@@ -174,8 +174,20 @@ def exportar_pdf_vista():
     f = _construir_filtros_informe()
     filas = construir_informe_empleado(f)
     periodo = periodo_texto(f.fecha_inicio, f.fecha_fin)
-    data = exportar_pdf(filas, "Informe de jornada", periodo)
+    data = exportar_pdf(
+        filas,
+        "Informe de registro de jornada laboral",
+        periodo,
+        fecha_emision=date.today(),
+        fecha_inicio=f.fecha_inicio,
+        fecha_fin=f.fecha_fin,
+    )
     resp = make_response(data)
+    nombre_pdf = (
+        "informe_mensual_individual.pdf"
+        if len(filas) == 1
+        else "informe_fichajes.pdf"
+    )
     resp.headers["Content-Type"] = "application/pdf"
-    resp.headers["Content-Disposition"] = "attachment; filename=informe_fichajes.pdf"
+    resp.headers["Content-Disposition"] = f"attachment; filename={nombre_pdf}"
     return resp
