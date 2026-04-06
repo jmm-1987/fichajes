@@ -1,0 +1,27 @@
+{% extends 'fichaje_publico/kiosk_base.html' %}
+{% block titulo %}Salida registrada{% endblock %}
+{% block contenido %}
+<div class="mx-auto text-center" style="max-width: 520px;">
+  <div class="alert alert-success border-0 shadow-sm">
+    <p class="h5 mb-1">Fichaje realizado correctamente</p>
+    <p class="mb-0 small">Salida · <strong>{{ empleado.nombre_completo }}</strong></p>
+  </div>
+  <p class="small text-muted mt-3 mb-0">Volviendo al inicio en <span id="kiosk-cuenta-atras">5</span> s…</p>
+</div>
+{% endblock %}
+{% block scripts_extra %}
+<script>
+(function () {
+  var n = 5;
+  var el = document.getElementById('kiosk-cuenta-atras');
+  var t = setInterval(function () {
+    n -= 1;
+    if (el) el.textContent = String(n);
+    if (n <= 0) {
+      clearInterval(t);
+      window.location.href = {{ url_for('fichaje_publico_bp.inicio') | tojson }};
+    }
+  }, 1000);
+})();
+</script>
+{% endblock %}

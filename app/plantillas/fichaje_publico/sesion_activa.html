@@ -1,0 +1,29 @@
+{% extends 'fichaje_publico/kiosk_base.html' %}
+{% block titulo %}Jornada activa{% endblock %}
+{% block contenido %}
+<div class="mx-auto" style="max-width: 520px;">
+  <h1 class="h4 kiosk-titulo text-azul-oscuro text-center mb-2">{{ empleado.nombre_completo }}</h1>
+  <p class="text-center text-muted small mb-4">Jornada en curso</p>
+
+  {% if contador.mostrar_contador and contador.contador_inicio_iso %}
+  <div id="bloque-contador-jornada" class="card border-0 shadow-sm mb-4 border-start border-4 border-success"
+       data-inicio-utc="{{ contador.contador_inicio_iso }}" role="status">
+    <div class="card-body py-4 text-center">
+      <p class="small text-muted mb-1">Lleva trabajando</p>
+      <p class="display-4 text-azul-oscuro mb-0 font-monospace" id="texto-contador-jornada">00:00:00</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('fichaje_publico_bp.fichar_salida') }}" class="d-grid">
+    <button type="submit" class="btn btn-dark btn-lg py-4">Detener · fichar salida</button>
+  </form>
+
+  <p class="text-center small mt-4 mb-0">
+    <a href="{{ url_for('fichaje_publico_bp.inicio') }}" class="text-muted">Volver al inicio</a>
+  </p>
+</div>
+{% endblock %}
+{% block scripts_extra %}
+<script src="{{ url_for('static', filename='js/fichajes.js') }}"></script>
+{% endblock %}

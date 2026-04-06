@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 
 from app.constantes import (
     EstadoRegistroJornada,
@@ -34,6 +35,32 @@ from app.utilidades.predicados import (
     puede_gestionar_empleado,
     roles_permitidos,
 )
+
+
+def _empresa_id_usuario_actual() -> int | None:
+    """Empresa del usuario (admin / manager): usuario.empresa_id o ficha de empleado."""
+    uid = getattr(current_user, "empresa_id", None)
+    if uid is not None:
+        return uid
+    emp = getattr(current_user, "empleado", None)
+    return emp.empresa_id if emp else None
+
+
+def _ids_empleados_equipo_responsable() -> list[int]:
+    """Subordinados del manager: responsable_usuario_id y compatibilidad con responsable_id."""
+    eid_self = obtener_id_empleado_actual()
+    if eid_self:
+        q = Empleado.query.filter(
+            or_(
+                Empleado.responsable_usuario_id == current_user.id,
+                Empleado.responsable_id == eid_self,
+            )
+        )
+    else:
+        q = Empleado.query.filter(
+            Empleado.responsable_usuario_id == current_user.id
+        )
+    return [r.id for r in q.all()]
 
 fichajes_bp = Blueprint(
     "fichajes_bp",
@@ -211,24 +238,32 @@ def listado_admin():
         RegistroJornada.estado != EstadoRegistroJornada.ANULADO,
     )
 
-    # Filtrar por empresa del usuario actual (salvo superadmin)
+    # Admin empresa / manager: limitar por empresa; manager solo a su equipo.
     if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
-        emp_actual = getattr(current_user, "empleado", None)
-        if emp_actual:
-            consulta = consulta.join(Empleado).filter(
-                Empleado.empresa_id == emp_actual.empresa_id
-            )
+        consulta = consulta.join(
+            Empleado, RegistroJornada.empleado_id == Empleado.id
+        )
+        empresa_ctx = _empresa_id_usuario_actual()
+        if empresa_ctx is not None:
+            consulta = consulta.filter(Empleado.empresa_id == empresa_ctx)
+        else:
+            consulta = consulta.filter(RegistroJornada.id == -1)
+        if current_user.rol == RolUsuario.RESPONSABLE:
+            eid_self = obtener_id_empleado_actual()
+            if eid_self:
+                consulta = consulta.filter(
+                    or_(
+                        Empleado.responsable_usuario_id == current_user.id,
+                        Empleado.responsable_id == eid_self,
+                    )
+                )
+            else:
+                consulta = consulta.filter(
+                    Empleado.responsable_usuario_id == current_user.id
+                )
+
     if emp_filtro and puede_gestionar_empleado(emp_filtro):
         consulta = consulta.filter(RegistroJornada.empleado_id == emp_filtro)
-    elif not es_administrador_o_superior():
-        emp_actual = obtener_id_empleado_actual()
-        subordinados = _ids_equipo(emp_actual)
-        if not subordinados:
-            consulta = consulta.filter(RegistroJornada.id == -1)
-        else:
-            consulta = consulta.filter(
-                RegistroJornada.empleado_id.in_(subordinados)
-            )
     registros = consulta.order_by(
         RegistroJornada.fecha_hora_servidor.desc()
     ).limit(200).all()
@@ -241,21 +276,24 @@ def listado_admin():
             .limit(50)
             .all()
         )
+    elif current_user.rol == RolUsuario.RESPONSABLE:
+        sub_ids = _ids_empleados_equipo_responsable()
+        if sub_ids:
+            solicitudes = (
+                SolicitudCorreccion.query.filter(
+                    SolicitudCorreccion.estado == "pendiente",
+                    SolicitudCorreccion.empleado_id.in_(sub_ids),
+                )
+                .order_by(SolicitudCorreccion.creado_en.desc())
+                .limit(50)
+                .all()
+            )
 
     return render_template(
         "listado_admin.html",
         registros=registros,
         solicitudes=solicitudes,
     )
-
-
-def _ids_equipo(responsable_id: int | None) -> list[int]:
-    from app.modelos import Empleado
-
-    if not responsable_id:
-        return []
-    subs = Empleado.query.filter_by(responsable_id=responsable_id).all()
-    return [s.id for s in subs]
 
 
 @fichajes_bp.route("/admin/registro/<int:registro_id>/corregir", methods=["GET", "POST"])
@@ -309,6 +347,7 @@ def corregir_registro(registro_id: int):
 @roles_permitidos(
     RolUsuario.SUPERADMINISTRADOR,
     RolUsuario.ADMINISTRADOR_EMPRESA,
+    RolUsuario.RESPONSABLE,
 )
 def resolver_solicitud(solicitud_id: int):
     sol = SolicitudCorreccion.query.get_or_404(solicitud_id)

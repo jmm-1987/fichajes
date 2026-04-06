@@ -34,6 +34,7 @@ class OrigenRegistroJornada:
     """Origen del fichaje."""
 
     WEB_EMPLEADO = "web_empleado"
+    PANEL_PUBLICO = "panel_publico"
     ADMIN = "admin"
     IMPORTACION = "importacion"
     AJUSTE = "ajuste"

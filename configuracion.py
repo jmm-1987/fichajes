@@ -16,6 +16,8 @@ class Configuracion:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = True
     HABILITAR_MODULO_PLANIFICACION = True
+    # Terminal / lector de códigos sin sesión (ruta /fichaje-publico/)
+    HABILITAR_FICHAJE_PUBLICO = True
     HABILITAR_BLOQUEO_INTENTOS = True
     MAX_INTENTOS_LOGIN = 5
     MINUTOS_BLOQUEO_LOGIN = 15

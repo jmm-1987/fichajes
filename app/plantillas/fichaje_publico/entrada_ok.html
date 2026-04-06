@@ -1,0 +1,37 @@
+{% extends 'fichaje_publico/kiosk_base.html' %}
+{% block titulo %}Entrada registrada{% endblock %}
+{% block contenido %}
+<div class="mx-auto text-center" style="max-width: 520px;">
+  <div class="alert alert-success border-0 shadow-sm">
+    <p class="h5 mb-1">Fichaje realizado correctamente</p>
+    <p class="mb-0 small">Entrada · <strong>{{ empleado.nombre_completo }}</strong></p>
+  </div>
+  {% if contador.mostrar_contador and contador.contador_inicio_iso %}
+  <div id="bloque-contador-jornada" class="card border-0 shadow-sm mt-3 border-start border-4 border-success"
+       data-inicio-utc="{{ contador.contador_inicio_iso }}" role="status">
+    <div class="card-body py-3">
+      <p class="small text-muted mb-1">Tiempo en jornada</p>
+      <p class="h1 text-azul-oscuro mb-0 font-monospace" id="texto-contador-jornada">00:00:00</p>
+    </div>
+  </div>
+  {% endif %}
+  <p class="small text-muted mt-3 mb-0">Volviendo al inicio en <span id="kiosk-cuenta-atras">5</span> s…</p>
+</div>
+{% endblock %}
+{% block scripts_extra %}
+<script src="{{ url_for('static', filename='js/fichajes.js') }}"></script>
+<script>
+(function () {
+  var n = 5;
+  var el = document.getElementById('kiosk-cuenta-atras');
+  var t = setInterval(function () {
+    n -= 1;
+    if (el) el.textContent = String(n);
+    if (n <= 0) {
+      clearInterval(t);
+      window.location.href = {{ url_for('fichaje_publico_bp.inicio') | tojson }};
+    }
+  }, 1000);
+})();
+</script>
+{% endblock %}

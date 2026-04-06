@@ -21,6 +21,9 @@
       {{ formulario.enviar(class="btn btn-acento w-100 py-2") }}
     </form>
     <p class="small mt-3 mb-0"><a href="{{ url_for('autenticacion_bp.solicitar_recuperacion_contrasena') }}">¿Olvidó su contraseña?</a></p>
+    {% if config.get('HABILITAR_FICHAJE_PUBLICO', True) %}
+    <p class="small mt-2 mb-0 text-center"><a href="{{ url_for('fichaje_publico_bp.inicio') }}">Fichaje con código (terminal / lector)</a></p>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

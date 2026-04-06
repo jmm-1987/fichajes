@@ -122,6 +122,7 @@ def registrar_blueprints(app: Flask) -> None:
     from app.administracion import administracion_bp
     from app.autenticacion import autenticacion_bp
     from app.empleados import empleados_bp
+    from app.fichaje_publico import fichaje_publico_bp
     from app.fichajes import fichajes_bp
     from app.informes import informes_bp
     from app.inicio import inicio_bp
@@ -129,6 +130,7 @@ def registrar_blueprints(app: Flask) -> None:
     from app.vacaciones import vacaciones_bp
 
     app.register_blueprint(autenticacion_bp)
+    app.register_blueprint(fichaje_publico_bp)
     app.register_blueprint(inicio_bp)
     app.register_blueprint(empleados_bp)
     app.register_blueprint(fichajes_bp)
@@ -137,6 +139,10 @@ def registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(administracion_bp)
     if app.config.get("HABILITAR_MODULO_PLANIFICACION", True):
         app.register_blueprint(planificacion_bp)
+
+    from app.extensiones import csrf
+
+    csrf.exempt(fichaje_publico_bp)
 
 
 def registrar_filtros_jinja(app: Flask) -> None:
