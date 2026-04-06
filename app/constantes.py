@@ -72,3 +72,14 @@ class TipoAccionAuditoria:
     ANULAR = "anular"
     APROBAR = "aprobar"
     RECHAZAR = "rechazar"
+
+
+class TipoClasificacionDiaLaboral:
+    """Clasificación manual de un día (además de trabajado automático por fichaje)."""
+
+    VACACIONES = "vacaciones"
+    LIBRE = "libre"
+    AUSENCIA_JUSTIFICADA = "ausencia_justificada"
+    AUSENCIA_NO_JUSTIFICADA = "ausencia_no_justificada"
+    # Compatibilidad con datos antiguos (migrar a ausencia_no_justificada)
+    ABSENTISMO_LEGACY = "absentismo"

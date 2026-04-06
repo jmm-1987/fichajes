@@ -1,7 +1,7 @@
 """Formularios de administración / configuración laboral."""
 
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, DateField, PasswordField, SelectField, StringField, SubmitField, TimeField
+from wtforms import BooleanField, DateField, PasswordField, SelectField, StringField, SubmitField, TextAreaField, TimeField
 from wtforms.validators import DataRequired, Email, Length, Optional
 
 from app.utilidades.fechas import FORMATO_FECHA
@@ -36,8 +36,19 @@ class FormularioHorasNocturnas(FlaskForm):
     enviar_nocturnas = SubmitField("Guardar franja nocturna")
 
 
+class FormularioTiposEmpleado(FlaskForm):
+    """Lista de tipos (oficina, almacén, etc.) definidos por empresa."""
+
+    tipos_lineas = TextAreaField(
+        "Tipos de empleado (uno por línea)",
+        validators=[Optional()],
+    )
+    enviar_tipos = SubmitField("Guardar tipos")
+
+
 class FormularioParametrosLaborales(FlaskForm):
-    fines_de_semana_festivo = BooleanField("Tratar sábado y domingo como festivo")
+    sabado_festivo = BooleanField("Sábado como no laborable (festivo)")
+    domingo_festivo = BooleanField("Domingo como no laborable (festivo)")
     tolerancia_minutos = StringField("Tolerancia fichaje (minutos)", validators=[Optional()])
     jornada_teorica_dia = StringField("Jornada teórica diaria (horas)", validators=[Optional()])
     enviar_parametros = SubmitField("Guardar parámetros")

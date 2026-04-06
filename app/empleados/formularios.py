@@ -5,6 +5,7 @@ from wtforms import (
     BooleanField,
     DateField,
     DecimalField,
+    HiddenField,
     SelectField,
     StringField,
     SubmitField,
@@ -60,6 +61,12 @@ class FormularioEmpleado(FlaskForm):
     )
     tipo_contrato = StringField("Tipo de contrato", validators=[Optional()])
     centro_trabajo = StringField("Centro de trabajo", validators=[Optional()])
+    tipo_empleado = SelectField(
+        "Tipo de empleado",
+        choices=[("", "— Sin asignar —")],
+        coerce=str,
+        validators=[Optional()],
+    )
     responsable_id = SelectField("Responsable", coerce=int, validators=[Optional()])
     activo = BooleanField("Activo", default=True)
     observaciones = TextAreaField("Observaciones internas", validators=[Optional()])
@@ -91,3 +98,26 @@ class FormularioEmpleadoSuperadmin(FormularioEmpleado):
         ],
         validators=[DataRequired()],
     )
+
+
+class FormularioClasificacionDia(FlaskForm):
+    """Clasificación manual de un día (manager / admin)."""
+
+    fecha_iso = HiddenField(validators=[DataRequired(), Length(min=10, max=10)])
+    tipo = SelectField(
+        "Tipo de día",
+        choices=[
+            ("vacaciones", "Vacaciones"),
+            ("libre", "Libre"),
+            ("ausencia_justificada", "Ausencia justificada"),
+            ("ausencia_no_justificada", "Ausencia no justificada"),
+            ("borrar", "Quitar clasificación manual"),
+        ],
+        coerce=str,
+        validators=[DataRequired()],
+    )
+    motivo = TextAreaField(
+        "Motivo (obligatorio en libre y ausencias)",
+        validators=[Optional(), Length(max=2000)],
+    )
+    enviar = SubmitField("Guardar")

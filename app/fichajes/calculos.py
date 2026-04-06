@@ -12,7 +12,7 @@ from typing import Iterable, List, Optional, Tuple
 from flask import current_app
 
 from app.constantes import EstadoRegistroJornada, TipoRegistroJornada
-from app.modelos import Empleado, Festivo, RegistroJornada
+from app.modelos import ConfiguracionAplicacion, Empleado, Festivo, RegistroJornada
 from app.utilidades.fechas import formatear_fecha
 
 
@@ -111,16 +111,102 @@ def obtener_ventana_nocturna(empresa_id: int | None) -> Tuple[time, time]:
     return parse_hora_config(str(ini)), parse_hora_config(str(fin))
 
 
-def es_festivo(d: date, empresa_id: int | None) -> bool:
-    """True si la fecha está en calendario de festivos activos (por empresa) o fin de semana según config."""
-    if current_app.config.get("FINES_DE_SEMANA_COMO_FESTIVO"):
-        if d.weekday() >= 5:
-            return True
+def _festivo_fecha_en_tabla(d: date, empresa_id: int | None) -> bool:
+    """Día marcado explícitamente en el calendario de festivos (tabla festivos)."""
     q = Festivo.query.filter_by(fecha=d, activo=True)
     if empresa_id is not None:
         q = q.filter(Festivo.empresa_id == empresa_id)
-    existe = q.first() is not None
-    return existe
+    return q.first() is not None
+
+
+def leer_sabado_domingo_festivo_empresa(empresa_id: int) -> tuple[bool, bool]:
+    """Valores efectivos para formularios (incluye migración fines_semana_festivo)."""
+    return _sabado_domingo_flags_empresa(empresa_id)
+
+
+def leer_sabado_domingo_festivo_global() -> tuple[bool, bool]:
+    """Config global superadmin (claves sin prefijo empresa)."""
+    return _sabado_domingo_flags_global()
+
+
+def _sabado_domingo_flags_empresa(empresa_id: int) -> tuple[bool, bool]:
+    """Flags (sábado festivo, domingo festivo) con migración desde fines_semana_festivo."""
+    clave = lambda n: f"empresa:{empresa_id}:{n}"
+    cs = ConfiguracionAplicacion.query.filter_by(clave=clave("sabado_festivo")).first()
+    cd = ConfiguracionAplicacion.query.filter_by(clave=clave("domingo_festivo")).first()
+    old = ConfiguracionAplicacion.query.filter_by(
+        clave=clave("fines_semana_festivo")
+    ).first()
+    legacy = old.valor == "1" if old is not None else False
+    vs = cs.valor == "1" if cs is not None else legacy
+    vd = cd.valor == "1" if cd is not None else legacy
+    return vs, vd
+
+
+def _sabado_domingo_flags_global() -> tuple[bool, bool]:
+    """Config global (pantalla superadmin sin empresa)."""
+    cs = ConfiguracionAplicacion.query.filter_by(clave="sabado_festivo").first()
+    cd = ConfiguracionAplicacion.query.filter_by(clave="domingo_festivo").first()
+    old = ConfiguracionAplicacion.query.filter_by(clave="fines_semana_festivo").first()
+    legacy = old.valor == "1" if old is not None else False
+    vs = cs.valor == "1" if cs is not None else legacy
+    vd = cd.valor == "1" if cd is not None else legacy
+    return vs, vd
+
+
+def _es_finde_por_config(d: date, empresa_id: int | None) -> bool:
+    if empresa_id is not None:
+        sab, dom = _sabado_domingo_flags_empresa(empresa_id)
+    else:
+        sab, dom = _sabado_domingo_flags_global()
+    wd = d.weekday()
+    if wd == 5:
+        return sab
+    if wd == 6:
+        return dom
+    return False
+
+
+def es_festivo(d: date, empresa_id: int | None) -> bool:
+    """
+    True si no es día laboral: festivo en tabla, variable de entorno global,
+    o sábado/domingo según configuración (por empresa o global en BD).
+    """
+    if _festivo_fecha_en_tabla(d, empresa_id):
+        return True
+    if current_app.config.get("FINES_DE_SEMANA_COMO_FESTIVO"):
+        if d.weekday() >= 5:
+            return True
+    return _es_finde_por_config(d, empresa_id)
+
+
+def tipo_apariencia_calendario_no_laborable(
+    d: date, empresa_id: int | None
+) -> str:
+    """
+    Clase CSS base para un día no laborable sin clasificación de fichaje:
+    festivo_bd (calendario), sabado, domingo, o no_laborable genérico.
+    """
+    if _festivo_fecha_en_tabla(d, empresa_id):
+        return "festivo_bd"
+    if current_app.config.get("FINES_DE_SEMANA_COMO_FESTIVO"):
+        if d.weekday() == 5:
+            return "sabado"
+        if d.weekday() == 6:
+            return "domingo"
+    if empresa_id is not None:
+        sab, dom = _sabado_domingo_flags_empresa(empresa_id)
+        if d.weekday() == 5 and sab:
+            return "sabado"
+        if d.weekday() == 6 and dom:
+            return "domingo"
+    else:
+        sab, dom = _sabado_domingo_flags_global()
+        if d.weekday() == 5 and sab:
+            return "sabado"
+        if d.weekday() == 6 and dom:
+            return "domingo"
+    return "no_laborable"
 
 
 def horas_en_ventana_nocturna(

@@ -29,6 +29,7 @@ class Empleado(db.Model):
     tipo_contrato = db.Column(db.String(80), nullable=True)
     activo = db.Column(db.Boolean, nullable=False, default=True)
     centro_trabajo = db.Column(db.String(200), nullable=True)
+    tipo_empleado = db.Column(db.String(120), nullable=True)
     responsable_id = db.Column(
         db.Integer,
         db.ForeignKey("empleados.id", ondelete="SET NULL"),

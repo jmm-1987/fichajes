@@ -76,13 +76,8 @@ def resumen_panel_administrador() -> dict:
     }
 
 
-def resumen_equipo_admin(vista: str = "dia") -> list[dict]:
-    """
-    Lista de empleados con estado actual y horas.
-    vista: 'dia', 'semana' o 'mes'
-    """
-    from app.fichajes.calculos import calcular_resumen_periodo
-
+def _rango_resumen_equipo(vista: str) -> tuple[date, date]:
+    """Inicio y fin (inclusive) para horas del resumen de equipo."""
     hoy = inicio_dia_local()
     if vista == "semana":
         inicio = hoy - timedelta(days=hoy.weekday())
@@ -97,11 +92,18 @@ def resumen_equipo_admin(vista: str = "dia") -> list[dict]:
     else:
         inicio = hoy
         fin = hoy
+    return inicio, fin
 
-    empleados = Empleado.query.filter_by(activo=True).order_by(
-        Empleado.apellidos, Empleado.nombre
-    )
 
+def resumen_equipo_para_empleados(
+    empleados: list[Empleado], vista: str = "dia"
+) -> list[dict]:
+    """
+    Lista de empleados con estado actual y horas en el periodo (hoy / semana / mes).
+    """
+    from app.fichajes.calculos import calcular_resumen_periodo
+
+    inicio, fin = _rango_resumen_equipo(vista)
     resultado = []
     for emp in empleados:
         res = calcular_resumen_periodo(emp.id, inicio, fin)
@@ -115,6 +117,19 @@ def resumen_equipo_admin(vista: str = "dia") -> list[dict]:
             }
         )
     return resultado
+
+
+def resumen_equipo_admin(vista: str = "dia") -> list[dict]:
+    """
+    Lista de empleados activos (todos) con estado actual y horas.
+    vista: 'dia', 'semana' o 'mes'
+    """
+    empleados = (
+        Empleado.query.filter_by(activo=True)
+        .order_by(Empleado.apellidos, Empleado.nombre)
+        .all()
+    )
+    return resumen_equipo_para_empleados(empleados, vista)
 
 
 def ultimo_fichaje_empleado(empleado_id: int) -> RegistroJornada | None:

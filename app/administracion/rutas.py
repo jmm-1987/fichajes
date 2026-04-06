@@ -8,16 +8,19 @@ from app.administracion.formularios import (
     FormularioHorasNocturnas,
     FormularioManagerEmpresa,
     FormularioParametrosLaborales,
+    FormularioTiposEmpleado,
 )
 from app.administracion.servicios import (
     activar_configuracion_nocturna,
     establecer_config,
     establecer_config_empresa,
     obtener_config_empresa,
+    obtener_o_crear_config,
 )
 from app.constantes import RolUsuario
 from app.extensiones import db
 from app.modelos import ConfiguracionHorasNocturnas, Empresa, Festivo, Usuario
+from app.fichajes.calculos import leer_sabado_domingo_festivo_empresa, leer_sabado_domingo_festivo_global
 from app.utilidades.predicados import roles_permitidos
 
 administracion_bp = Blueprint(
@@ -43,6 +46,13 @@ def configuracion_laboral():
         if activa:
             form_noche.hora_inicio.data = activa.hora_inicio
             form_noche.hora_fin.data = activa.hora_fin
+        cfg_tol = obtener_o_crear_config("tolerancia_fichaje_minutos", "5")
+        cfg_jornada = obtener_o_crear_config("jornada_teorica_horas_dia", "8.0")
+        form_params.tolerancia_minutos.data = cfg_tol.valor
+        form_params.jornada_teorica_dia.data = cfg_jornada.valor
+        sab, dom = leer_sabado_domingo_festivo_global()
+        form_params.sabado_festivo.data = sab
+        form_params.domingo_festivo.data = dom
 
     if request.method == "POST":
         if "noche-enviar_nocturnas" in request.form and form_noche.validate():
@@ -67,8 +77,12 @@ def configuracion_laboral():
             return redirect(url_for("administracion_bp.configuracion_laboral"))
         if "par-enviar_parametros" in request.form and form_params.validate():
             establecer_config(
-                "fines_semana_festivo",
-                "1" if form_params.fines_de_semana_festivo.data else "0",
+                "sabado_festivo",
+                "1" if form_params.sabado_festivo.data else "0",
+            )
+            establecer_config(
+                "domingo_festivo",
+                "1" if form_params.domingo_festivo.data else "0",
             )
             if form_params.tolerancia_minutos.data:
                 establecer_config(
@@ -135,18 +149,20 @@ def configuracion_laboral_empresa():
     form_params = FormularioParametrosLaborales(prefix="par")
     form_noche = FormularioHorasNocturnas(prefix="noche")
     form_festivo = FormularioFestivo(prefix="fest")
+    form_tipos = FormularioTiposEmpleado(prefix="tipos")
 
     from app.modelos import ConfiguracionHorasNocturnas, Festivo
 
     if request.method == "GET":
-        cfg_fs = obtener_config_empresa(empresa_id, "fines_semana_festivo", "0")
         cfg_tol = obtener_config_empresa(empresa_id, "tolerancia_fichaje_minutos", "5")
         cfg_jornada = obtener_config_empresa(
             empresa_id, "jornada_teorica_horas_dia", "8.0"
         )
-        form_params.fines_de_semana_festivo.data = cfg_fs.valor == "1"
         form_params.tolerancia_minutos.data = cfg_tol.valor
         form_params.jornada_teorica_dia.data = cfg_jornada.valor
+        sab, dom = leer_sabado_domingo_festivo_empresa(empresa_id)
+        form_params.sabado_festivo.data = sab
+        form_params.domingo_festivo.data = dom
 
         noct_activa = ConfiguracionHorasNocturnas.query.filter_by(
             empresa_id=empresa_id, activo=True
@@ -155,7 +171,29 @@ def configuracion_laboral_empresa():
             form_noche.hora_inicio.data = noct_activa.hora_inicio
             form_noche.hora_fin.data = noct_activa.hora_fin
 
+        cfg_tipos = obtener_config_empresa(empresa_id, "tipos_empleado", "")
+        form_tipos.tipos_lineas.data = cfg_tipos.valor or ""
+
     if request.method == "POST":
+        if "tipos-enviar_tipos" in request.form and form_tipos.validate():
+            establecer_config_empresa(
+                empresa_id,
+                "tipos_empleado",
+                (form_tipos.tipos_lineas.data or "").strip(),
+            )
+            flash(
+                f"Tipos de empleado guardados para {empresa.nombre}.",
+                "exito",
+            )
+            if current_user.rol == RolUsuario.SUPERADMINISTRADOR:
+                return redirect(
+                    url_for(
+                        "administracion_bp.configuracion_laboral_empresa",
+                        empresa_id=empresa_id,
+                    )
+                )
+            return redirect(url_for("administracion_bp.configuracion_laboral_empresa"))
+
         if "noche-enviar_nocturnas" in request.form and form_noche.validate():
             # Desactivar anteriores y activar una nueva para la empresa
             for fila in ConfiguracionHorasNocturnas.query.filter_by(
@@ -191,8 +229,13 @@ def configuracion_laboral_empresa():
         if "par-enviar_parametros" in request.form and form_params.validate():
             establecer_config_empresa(
                 empresa_id,
-                "fines_semana_festivo",
-                "1" if form_params.fines_de_semana_festivo.data else "0",
+                "sabado_festivo",
+                "1" if form_params.sabado_festivo.data else "0",
+            )
+            establecer_config_empresa(
+                empresa_id,
+                "domingo_festivo",
+                "1" if form_params.domingo_festivo.data else "0",
             )
             if form_params.tolerancia_minutos.data:
                 establecer_config_empresa(
@@ -231,6 +274,7 @@ def configuracion_laboral_empresa():
         form_params=form_params,
         form_noche=form_noche,
         form_festivo=form_festivo,
+        form_tipos=form_tipos,
         empresa=empresa,
         festivos=festivos,
         nocturna=nocturna,

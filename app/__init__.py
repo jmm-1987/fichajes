@@ -34,10 +34,13 @@ def crear_aplicacion(config_class=Configuracion) -> Flask:
 
     @aplicacion_flask.context_processor
     def inyectar_config_plantillas():
+        from app.utilidades.predicados import obtener_nombre_empresa_usuario_actual
+
         return {
             "planificacion_habilitada": aplicacion_flask.config.get(
                 "HABILITAR_MODULO_PLANIFICACION", True
             ),
+            "nombre_empresa_barra": obtener_nombre_empresa_usuario_actual(),
         }
 
     with aplicacion_flask.app_context():
@@ -66,6 +69,28 @@ def crear_aplicacion(config_class=Configuracion) -> Flask:
                     )
                 )
                 db.session.commit()
+
+            nombres_cols = {
+                fila[1]
+                for fila in db.session.execute(text("PRAGMA table_info(empleados);")).fetchall()
+            }
+            if "tipo_empleado" not in nombres_cols:
+                db.session.execute(
+                    text("ALTER TABLE empleados ADD COLUMN tipo_empleado VARCHAR(120)")
+                )
+                db.session.commit()
+
+            # Migrar tipos antiguos de clasificación día (SQLite en caliente)
+            try:
+                db.session.execute(
+                    text(
+                        "UPDATE clasificaciones_dia_laboral SET tipo = 'ausencia_no_justificada' "
+                        "WHERE tipo = 'absentismo'"
+                    )
+                )
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
 
             # Crear superadmin por defecto si no hay usuarios
             if not Usuario.query.first():

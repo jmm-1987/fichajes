@@ -117,3 +117,27 @@ def roles_dashboard_admin() -> Iterable[str]:
 def modulo_planificacion_habilitado() -> bool:
     """Lee la bandera de funcionalidad del planificador."""
     return bool(current_app.config.get("HABILITAR_MODULO_PLANIFICACION", True))
+
+
+def obtener_nombre_empresa_usuario_actual() -> str | None:
+    """
+    Nombre de la empresa del usuario logueado: vía ficha de empleado o usuario.empresa_id
+    (managers sin ficha usan empresa_id).
+    """
+    if not current_user.is_authenticated:
+        return None
+    from app.modelos import Empresa
+
+    emp = getattr(current_user, "empleado", None)
+    if emp is not None:
+        ent = getattr(emp, "empresa", None)
+        if ent is not None:
+            return ent.nombre
+        if emp.empresa_id:
+            e = Empresa.query.get(emp.empresa_id)
+            return e.nombre if e else None
+    eid = getattr(current_user, "empresa_id", None)
+    if eid:
+        e = Empresa.query.get(eid)
+        return e.nombre if e else None
+    return None

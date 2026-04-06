@@ -1,13 +1,25 @@
 """Vistas de gestión de empleados."""
 
+from datetime import date
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 
 from app.constantes import RolUsuario
-from app.empleados.formularios import FormularioEmpleado, FormularioEmpleadoSuperadmin
+from app.empleados.calendario_servicios import (
+    aplicar_clasificacion_dia,
+    construir_calendario_mes,
+)
+from app.empleados.formularios import (
+    FormularioClasificacionDia,
+    FormularioEmpleado,
+    FormularioEmpleadoSuperadmin,
+)
 from app.empleados.servicios import (
     actualizar_empleado,
     crear_empleado_con_usuario,
+    opciones_select_tipo_empleado,
     resumen_mes_actual,
     vacaciones_resumen,
 )
@@ -25,6 +37,25 @@ empleados_bp = Blueprint(
     url_prefix="/empleados",
     template_folder="../plantillas/empleados",
 )
+
+
+def _empresa_id_para_tipos_empleado(formulario, es_super: bool) -> int | None:
+    """Empresa cuyos tipos aplican al desplegable (alta / edición)."""
+    if es_super and hasattr(formulario, "empresa_id"):
+        if request.method == "POST":
+            raw = (request.form.get("empresa_id") or "").strip()
+            if raw.isdigit():
+                return int(raw)
+        pref = request.args.get("empresa_id", type=int)
+        if pref:
+            return pref
+        if formulario.empresa_id.data:
+            return formulario.empresa_id.data
+        return None
+    emp_actual = getattr(current_user, "empleado", None)
+    if emp_actual is not None:
+        return emp_actual.empresa_id
+    return getattr(current_user, "empresa_id", None)
 
 
 def _choices_responsables():
@@ -60,8 +91,15 @@ def listado():
             q = q.filter(Empleado.empresa_id == emp_actual.empresa_id)
         lista = q.order_by(Empleado.apellidos, Empleado.nombre).all()
     else:
+        cond = [Empleado.responsable_usuario_id == current_user.id]
         emp_id = obtener_id_empleado_actual()
-        lista = Empleado.query.filter_by(responsable_id=emp_id).all()
+        if emp_id:
+            cond.append(Empleado.responsable_id == emp_id)
+        lista = (
+            Empleado.query.filter(or_(*cond))
+            .order_by(Empleado.apellidos, Empleado.nombre)
+            .all()
+        )
     return render_template("listado.html", empleados=lista)
 
 
@@ -88,6 +126,11 @@ def nuevo():
         if empresa_pref:
             formulario.empresa_id.data = empresa_pref
 
+    eid_tipos = _empresa_id_para_tipos_empleado(
+        formulario, es_superadministrador()
+    )
+    formulario.tipo_empleado.choices = opciones_select_tipo_empleado(eid_tipos, None)
+
     rol_pref = request.args.get("rol")
     if rol_pref in [
         RolUsuario.EMPLEADO,
@@ -112,6 +155,7 @@ def nuevo():
                 "saldo_vacaciones": formulario.saldo_vacaciones.data,
                 "tipo_contrato": formulario.tipo_contrato.data,
                 "centro_trabajo": formulario.centro_trabajo.data,
+                "tipo_empleado": formulario.tipo_empleado.data,
                 "responsable_usuario_id": formulario.responsable_id.data
                 if formulario.responsable_id.data
                 else None,
@@ -146,6 +190,20 @@ def detalle(empleado_id: int):
     emp = Empleado.query.get_or_404(empleado_id)
     resumen = resumen_mes_actual(emp.id)
     vac = vacaciones_resumen(emp)
+    hoy = date.today()
+    mes = request.args.get("mes", type=int) or hoy.month
+    anio = request.args.get("anio", type=int) or hoy.year
+    puede_editar_calendario = (
+        current_user.rol != RolUsuario.EMPLEADO
+        and puede_gestionar_empleado(empleado_id)
+    )
+    calendario_mes = construir_calendario_mes(
+        emp.id,
+        mes,
+        anio,
+        puede_editar=puede_editar_calendario,
+    )
+    form_clasificacion = FormularioClasificacionDia()
     incidencias = (
         SolicitudCorreccion.query.filter_by(empleado_id=emp.id)
         .order_by(SolicitudCorreccion.creado_en.desc())
@@ -163,9 +221,61 @@ def detalle(empleado_id: int):
         empleado=emp,
         resumen_mes=resumen,
         vacaciones=vac,
+        calendario_mes=calendario_mes,
+        form_clasificacion=form_clasificacion,
+        puede_editar_calendario=puede_editar_calendario,
         incidencias=incidencias,
         ultimos_fichajes=ultimos_fichajes,
     )
+
+
+@empleados_bp.route("/<int:empleado_id>/clasificar-dia", methods=["POST"])
+@login_required
+@roles_permitidos(
+    RolUsuario.SUPERADMINISTRADOR,
+    RolUsuario.ADMINISTRADOR_EMPRESA,
+    RolUsuario.RESPONSABLE,
+)
+def clasificar_dia_guardar(empleado_id: int):
+    if not puede_gestionar_empleado(empleado_id):
+        flash("Sin acceso.", "peligro")
+        return redirect(url_for("inicio_bp.panel"))
+
+    form = FormularioClasificacionDia()
+    if form.validate_on_submit():
+        try:
+            f = date.fromisoformat(form.fecha_iso.data.strip())
+        except ValueError:
+            flash("Fecha no válida.", "peligro")
+            return redirect(
+                url_for("empleados_bp.detalle", empleado_id=empleado_id)
+            )
+        ok, msg = aplicar_clasificacion_dia(
+            empleado_id,
+            f,
+            form.tipo.data,
+            form.motivo.data,
+            current_user.id,
+        )
+        flash(msg, "exito" if ok else "peligro")
+        return redirect(
+            url_for(
+                "empleados_bp.detalle",
+                empleado_id=empleado_id,
+                mes=f.month,
+                anio=f.year,
+            )
+        )
+
+    if form.errors:
+        flash(
+            "Revise el formulario: "
+            + "; ".join(f"{k}: {v}" for k, v in form.errors.items()),
+            "peligro",
+        )
+    else:
+        flash("Revise el formulario.", "peligro")
+    return redirect(url_for("empleados_bp.detalle", empleado_id=empleado_id))
 
 
 @empleados_bp.route("/<int:empleado_id>/editar", methods=["GET", "POST"])
@@ -194,6 +304,9 @@ def editar(empleado_id: int):
         formulario.empresa_id.choices = [
             (e.id, e.nombre) for e in Empresa.query.order_by(Empresa.nombre).all()
         ]
+    formulario.tipo_empleado.choices = opciones_select_tipo_empleado(
+        emp.empresa_id, emp.tipo_empleado
+    )
 
     if request.method == "GET":
         formulario.saldo_vacaciones.data = emp.saldo_vacaciones
@@ -215,6 +328,7 @@ def editar(empleado_id: int):
             "saldo_vacaciones": formulario.saldo_vacaciones.data,
             "tipo_contrato": formulario.tipo_contrato.data,
             "centro_trabajo": formulario.centro_trabajo.data,
+            "tipo_empleado": formulario.tipo_empleado.data,
             "responsable_usuario_id": formulario.responsable_id.data
             if formulario.responsable_id.data
             else None,
@@ -227,9 +341,13 @@ def editar(empleado_id: int):
         if es_superadministrador() and hasattr(formulario, "empresa_id"):
             datos["empresa_id"] = formulario.empresa_id.data
         pwd = (formulario.contrasena.data or "").strip() or None
-        actualizar_empleado(emp, datos, pwd)
-        flash("Cambios guardados.", "exito")
-        return redirect(url_for("empleados_bp.detalle", empleado_id=emp.id))
+        try:
+            actualizar_empleado(emp, datos, pwd)
+        except ValueError as e:
+            flash(str(e), "peligro")
+        else:
+            flash("Cambios guardados.", "exito")
+            return redirect(url_for("empleados_bp.detalle", empleado_id=emp.id))
 
     return render_template(
         "formulario.html",

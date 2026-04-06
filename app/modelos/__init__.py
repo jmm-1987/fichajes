@@ -13,6 +13,7 @@ from app.modelos.planificacion import (
     PlantillaPlanificacion,
 )
 from app.modelos.usuario import Usuario
+from app.modelos.clasificacion_dia import ClasificacionDiaLaboral
 from app.modelos.vacaciones import SolicitudVacaciones
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "Festivo",
     "ConfiguracionHorasNocturnas",
     "SolicitudVacaciones",
+    "ClasificacionDiaLaboral",
     "PlanificacionSemanal",
     "ItemPlanificacionSemanal",
     "PlantillaPlanificacion",

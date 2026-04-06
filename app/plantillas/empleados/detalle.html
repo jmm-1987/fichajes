@@ -4,9 +4,22 @@
 <div class="container-fluid px-3 pb-5">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 mb-3">
     <h1 class="h3 text-azul-oscuro mb-0">{{ empleado.nombre_completo }}</h1>
-    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('empleados_bp.editar', empleado_id=empleado.id) }}">Editar</a>
+    {% if current_user.rol != 'empleado' %}
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('empleados_bp.editar', empleado_id=empleado.id) }}">Editar ficha</a>
+    {% endif %}
   </div>
   <div class="row g-3">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-2">
+          <p class="small text-muted mb-0">
+            Código <strong>{{ empleado.codigo_empleado }}</strong>
+            {% if empleado.centro_trabajo %} · Centro <strong>{{ empleado.centro_trabajo }}</strong>{% endif %}
+            {% if empleado.tipo_empleado %} · Tipo <strong>{{ empleado.tipo_empleado }}</strong>{% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
     <div class="col-lg-6">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
@@ -33,6 +46,121 @@
       </div>
     </div>
   </div>
+
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="h6 text-secondary mb-0">Calendario laboral ({{ calendario_mes.titulo_mes }})</h2>
+        <div class="btn-group btn-group-sm">
+          <a class="btn btn-outline-secondary" href="{{ url_for('empleados_bp.detalle', empleado_id=empleado.id, mes=calendario_mes.prev.mes, anio=calendario_mes.prev.anio) }}">« Mes anterior</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('empleados_bp.detalle', empleado_id=empleado.id, mes=calendario_mes.sig.mes, anio=calendario_mes.sig.anio) }}">Mes siguiente »</a>
+        </div>
+      </div>
+      <p class="small text-muted mb-2">
+        Contadores del mes:
+        <strong>Trabajado</strong> {{ calendario_mes.contadores.trabajado }}
+        · <strong>Vacaciones</strong> {{ calendario_mes.contadores.vacaciones }}
+        · <strong>Libre</strong> {{ calendario_mes.contadores.libre }}
+        · <strong>Aus. justificada</strong> {{ calendario_mes.contadores.ausencia_justificada }}
+        · <strong>Aus. no justificada</strong> {{ calendario_mes.contadores.ausencia_no_justificada }}
+      </p>
+      <div class="d-flex flex-wrap gap-3 small mb-3 text-muted">
+        <span><span class="badge bg-success">&nbsp;</span> Trabajado (fichaje completo)</span>
+        <span><span class="badge bg-danger">&nbsp;</span> Pendiente de clasificar</span>
+        <span><span class="badge bg-info text-dark">&nbsp;</span> Vacaciones</span>
+        <span><span class="badge bg-primary">&nbsp;</span> Libre</span>
+        <span><span class="badge bg-warning text-dark">&nbsp;</span> Ausencia justificada</span>
+        <span><span class="badge bg-secondary">&nbsp;</span> Ausencia no justificada</span>
+        <span><span class="cal-leyenda-festivo-bd">&nbsp;</span> Festivo (calendario)</span>
+        <span><span class="cal-leyenda-sabado">&nbsp;</span> Sábado no laborable</span>
+        <span><span class="cal-leyenda-domingo">&nbsp;</span> Domingo no laborable</span>
+        <span><span class="badge bg-light text-dark border">&nbsp;</span> Otro no laborable</span>
+      </div>
+      <div class="cal-mes">
+        <div class="cal-dia-hdr">Lun</div>
+        <div class="cal-dia-hdr">Mar</div>
+        <div class="cal-dia-hdr">Mié</div>
+        <div class="cal-dia-hdr">Jue</div>
+        <div class="cal-dia-hdr">Vie</div>
+        <div class="cal-dia-hdr">Sáb</div>
+        <div class="cal-dia-hdr">Dom</div>
+        {% for _ in range(calendario_mes.padding_inicio) %}
+        <div class="cal-dia cal-dia-vacio"></div>
+        {% endfor %}
+        {% for c in calendario_mes.celdas %}
+        {% set cls = 'cal-dia-no-laborable' %}
+        {% if not c.laborable %}
+          {% if c.estilo_no_laborable == 'festivo_bd' %}{% set cls = 'cal-dia-festivo-bd' %}
+          {% elif c.estilo_no_laborable == 'sabado' %}{% set cls = 'cal-dia-sabado-no-lab' %}
+          {% elif c.estilo_no_laborable == 'domingo' %}{% set cls = 'cal-dia-domingo-no-lab' %}
+          {% endif %}
+        {% else %}
+        {% if c.estado == 'trabajado' %}{% set cls = 'cal-dia-trabajado' %}{% endif %}
+        {% if c.estado == 'pendiente' %}{% set cls = 'cal-dia-pendiente' %}{% endif %}
+        {% if c.estado == 'vacaciones' %}{% set cls = 'cal-dia-vacaciones' %}{% endif %}
+        {% if c.estado == 'libre' %}{% set cls = 'cal-dia-libre' %}{% endif %}
+        {% if c.estado == 'ausencia_justificada' %}{% set cls = 'cal-dia-ausencia-justificada' %}{% endif %}
+        {% if c.estado == 'ausencia_no_justificada' %}{% set cls = 'cal-dia-ausencia-no-justificada' %}{% endif %}
+        {% endif %}
+        <div class="cal-dia {{ cls }}{% if c.editable and puede_editar_calendario %} cal-dia-clic{% endif %}"
+             {% if c.editable and puede_editar_calendario %}
+             role="button"
+             data-bs-toggle="modal"
+             data-bs-target="#modalClasificarDia"
+             data-fecha-iso="{{ c.fecha.isoformat() }}"
+             data-estado="{{ c.estado }}"
+             data-motivo="{{ (c.motivo or '')|e }}"
+             title="Clasificar día"
+             {% endif %}>
+          <span class="cal-dia-num">{{ c.dia }}</span>
+          {% if c.motivo and c.estado in ['libre','vacaciones','ausencia_justificada','ausencia_no_justificada'] %}
+          <span class="cal-dia-hint" title="{{ c.motivo }}">·</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% for _ in range(calendario_mes.padding_fin) %}
+        <div class="cal-dia cal-dia-vacio"></div>
+        {% endfor %}
+      </div>
+      {% if puede_editar_calendario %}
+      <p class="small text-muted mt-2 mb-0">Pulse un día laborable para marcar vacaciones, libre o ausencias (justificada / no justificada; motivo obligatorio). Los días con vacaciones aprobadas en el sistema no se editan aquí.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if puede_editar_calendario %}
+  <div class="modal fade" id="modalClasificarDia" tabindex="-1" aria-labelledby="modalClasificarDiaTitulo" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" action="{{ url_for('empleados_bp.clasificar_dia_guardar', empleado_id=empleado.id) }}" id="formClasificarDia">
+          {# Solo CSRF: hidden_tag() sin argumentos duplicaría fecha_iso (vacío) #}
+          {{ form_clasificacion.hidden_tag('csrf_token') }}
+          {{ form_clasificacion.fecha_iso(id="clasif_fecha_iso") }}
+          <div class="modal-header">
+            <h2 class="modal-title h5" id="modalClasificarDiaTitulo">Clasificar día</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small mb-2" id="clasif_fecha_txt"></p>
+            <div class="mb-3">
+              <label class="form-label" for="clasif_tipo">{{ form_clasificacion.tipo.label.text }}</label>
+              {{ form_clasificacion.tipo(class="form-select", id="clasif_tipo") }}
+            </div>
+            <div class="mb-0">
+              <label class="form-label" for="clasif_motivo">{{ form_clasificacion.motivo.label.text }}</label>
+              {{ form_clasificacion.motivo(class="form-control", id="clasif_motivo", rows="3") }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            {{ form_clasificacion.enviar(class="btn btn-primary") }}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <h2 class="h6 text-secondary mt-4">Últimos fichajes</h2>
   <div class="table-responsive card border-0 shadow-sm">
     <table class="table table-sm mb-0"><thead><tr><th>Fecha/hora</th><th>Tipo</th><th>Estado</th></tr></thead>
@@ -50,4 +178,35 @@
     {% else %}<li class="list-group-item">Ninguna reciente</li>{% endfor %}
   </ul>
 </div>
+{% endblock %}
+{% block scripts_extra %}
+{% if puede_editar_calendario %}
+<script>
+document.getElementById('modalClasificarDia')?.addEventListener('show.bs.modal', function (ev) {
+  const el = ev.relatedTarget;
+  if (!el || !el.dataset) return;
+  const iso = el.dataset.fechaIso || '';
+  document.getElementById('clasif_fecha_iso').value = iso;
+  const d = iso ? new Date(iso + 'T12:00:00') : null;
+  const txt = d ? d.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  document.getElementById('clasif_fecha_txt').textContent = txt;
+  const motivo = el.dataset.motivo || '';
+  document.getElementById('clasif_motivo').value = motivo;
+  const tipo = document.getElementById('clasif_tipo');
+  const est = el.dataset.estado || '';
+  if (tipo) {
+    if (['vacaciones', 'libre', 'ausencia_justificada', 'ausencia_no_justificada'].indexOf(est) >= 0) tipo.value = est;
+    else tipo.value = 'vacaciones';
+  }
+});
+document.getElementById('formClasificarDia')?.addEventListener('submit', function (ev) {
+  const t = document.getElementById('clasif_tipo')?.value;
+  const m = (document.getElementById('clasif_motivo')?.value || '').trim();
+  if ((t === 'libre' || t === 'ausencia_justificada' || t === 'ausencia_no_justificada') && !m) {
+    ev.preventDefault();
+    alert('Indique el motivo para libre o ausencias.');
+  }
+});
+</script>
+{% endif %}
 {% endblock %}

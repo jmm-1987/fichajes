@@ -39,7 +39,8 @@
           <h2 class="h6">Parámetros (clave-valor en BD)</h2>
           <form method="post">
             {{ form_params.hidden_tag() }}
-            <div class="form-check mb-2">{{ form_params.fines_de_semana_festivo(class="form-check-input") }} {{ form_params.fines_de_semana_festivo.label(class="form-check-label") }}</div>
+            <div class="form-check mb-2">{{ form_params.sabado_festivo(class="form-check-input") }} {{ form_params.sabado_festivo.label(class="form-check-label") }}</div>
+            <div class="form-check mb-2">{{ form_params.domingo_festivo(class="form-check-input") }} {{ form_params.domingo_festivo.label(class="form-check-label") }}</div>
             <div class="mb-2">{{ form_params.tolerancia_minutos.label(class="form-label") }}{{ form_params.tolerancia_minutos(class="form-control") }}</div>
             <div class="mb-2">{{ form_params.jornada_teorica_dia.label(class="form-label") }}{{ form_params.jornada_teorica_dia(class="form-control") }}</div>
             {{ form_params.enviar_parametros(class="btn btn-outline-primary btn-sm") }}

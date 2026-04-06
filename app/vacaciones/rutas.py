@@ -4,8 +4,10 @@ from datetime import date
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 
 from app.constantes import RolUsuario, EstadoSolicitudVacaciones
+from app.extensiones import db
 from app.modelos import Empleado, SolicitudVacaciones
 from app.utilidades.predicados import (
     es_administrador_o_superior,
@@ -31,6 +33,31 @@ vacaciones_bp = Blueprint(
     url_prefix="/vacaciones",
     template_folder="../plantillas/vacaciones",
 )
+
+
+def _query_solicitudes_vacaciones_alcance():
+    """
+    Solicitudes de vacaciones visibles según rol: empresa del usuario y,
+    si es responsable, solo su equipo.
+    """
+    q = SolicitudVacaciones.query
+    if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
+        emp_actual = getattr(current_user, "empleado", None)
+        empresa_id = getattr(current_user, "empresa_id", None)
+        if not empresa_id and emp_actual:
+            empresa_id = emp_actual.empresa_id
+        if empresa_id:
+            q = q.join(Empleado, SolicitudVacaciones.empleado_id == Empleado.id).filter(
+                Empleado.empresa_id == empresa_id
+            )
+    if current_user.rol == RolUsuario.RESPONSABLE:
+        cond_r = [Empleado.responsable_usuario_id == current_user.id]
+        eid = obtener_id_empleado_actual()
+        if eid:
+            cond_r.append(Empleado.responsable_id == eid)
+        ids_equipo = db.session.query(Empleado.id).filter(or_(*cond_r))
+        q = q.filter(SolicitudVacaciones.empleado_id.in_(ids_equipo))
+    return q
 
 
 @vacaciones_bp.route("/mis-vacaciones", methods=["GET", "POST"])
@@ -105,7 +132,7 @@ def calendario_simple():
     )
 
 
-@vacaciones_bp.route("/admin")
+@vacaciones_bp.route("/admin", methods=["GET", "POST"])
 @login_required
 @roles_permitidos(
     RolUsuario.SUPERADMINISTRADOR,
@@ -114,22 +141,18 @@ def calendario_simple():
 )
 def listado_admin():
     marcar_disfrutadas_pasadas()
-    pendientes_q = SolicitudVacaciones.query.filter_by(
-        estado=EstadoSolicitudVacaciones.PENDIENTE
+    base = _query_solicitudes_vacaciones_alcance()
+    # filter_by(estado=...) falla si hay join con Empleado: "estado" se asocia al modelo equivocado
+    pendientes = (
+        base.filter(
+            SolicitudVacaciones.estado == EstadoSolicitudVacaciones.PENDIENTE
+        )
+        .order_by(SolicitudVacaciones.solicitado_en.desc())
+        .all()
     )
-    # Filtrar por empresa del usuario actual (salvo superadmin)
-    if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
-        emp_actual = getattr(current_user, "empleado", None)
-        empresa_id = getattr(current_user, "empresa_id", None)
-        if not empresa_id and emp_actual:
-            empresa_id = emp_actual.empresa_id
-        if empresa_id:
-            pendientes_q = pendientes_q.join(Empleado).filter(
-                Empleado.empresa_id == empresa_id
-            )
-    pendientes = pendientes_q.order_by(
-        SolicitudVacaciones.solicitado_en.desc()
-    ).all()
+    listado_vacaciones = base.order_by(
+        SolicitudVacaciones.fecha_inicio.desc()
+    ).limit(500).all()
     form_manual = FormularioVacacionesManual()
     emp_q = Empleado.query.filter_by(activo=True)
     if current_user.rol != RolUsuario.SUPERADMINISTRADOR:
@@ -139,6 +162,12 @@ def listado_admin():
             empresa_id = emp_actual.empresa_id
         if empresa_id:
             emp_q = emp_q.filter(Empleado.empresa_id == empresa_id)
+    if current_user.rol == RolUsuario.RESPONSABLE:
+        cond_r = [Empleado.responsable_usuario_id == current_user.id]
+        eid = obtener_id_empleado_actual()
+        if eid:
+            cond_r.append(Empleado.responsable_id == eid)
+        emp_q = emp_q.filter(or_(*cond_r))
     form_manual.empleado_id.choices = [
         (e.id, e.nombre_completo) for e in emp_q.all()
     ]
@@ -165,8 +194,6 @@ def listado_admin():
             from app.fichajes.validadores import ahora_servidor
 
             sol.aprobado_en = ahora_servidor()
-            from app.extensiones import db
-
             db.session.commit()
             flash("Vacaciones registradas y aprobadas.", "exito")
         else:
@@ -176,6 +203,7 @@ def listado_admin():
     return render_template(
         "admin.html",
         pendientes=pendientes,
+        listado_vacaciones=listado_vacaciones,
         form_manual=form_manual,
     )
 

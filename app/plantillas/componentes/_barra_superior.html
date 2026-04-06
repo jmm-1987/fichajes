@@ -1,16 +1,13 @@
 <header class="barra-superior">
   <div class="container-fluid d-flex align-items-center justify-content-between py-2 px-3">
-    <div class="d-flex align-items-center gap-3">
-      <span class="marca-texto d-none d-sm-inline">JM2 FICHAJES</span>
+    <div class="d-flex align-items-center gap-2 gap-sm-3 flex-wrap">
+      <span class="marca-texto">JM2 FICHAJES</span>
       {% if current_user.is_authenticated %}
-      {% set emp = current_user.empleado.empresa if current_user.empleado is not none else None %}
-      <span class="small ms-2">
         {% if current_user.rol == 'superadministrador' %}
-          <strong>SUPERADMINISTRADOR</strong>
-        {% elif emp %}
-          <strong>{{ emp.nombre }}</strong>
+        <span class="small text-muted"><strong>SUPERADMINISTRADOR</strong></span>
+        {% elif nombre_empresa_barra %}
+        <span class="small text-azul-oscuro fw-semibold">{{ nombre_empresa_barra }}</span>
         {% endif %}
-      </span>
       {% endif %}
     </div>
     <div class="d-flex align-items-center gap-3">

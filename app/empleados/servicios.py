@@ -4,11 +4,64 @@ from calendar import monthrange
 from datetime import date
 from decimal import Decimal
 
+from app.administracion.servicios import obtener_config_empresa
 from app.auditoria.servicios import registrar_auditoria
 from app.constantes import TipoAccionAuditoria
 from app.extensiones import db
 from app.fichajes.calculos import calcular_resumen_periodo
 from app.modelos import Empleado, Usuario
+
+
+def tipos_empleado_configurados(empresa_id: int) -> list[str]:
+    """Etiquetas de tipo definidas en parámetros de la empresa (una por línea)."""
+    cfg = obtener_config_empresa(empresa_id, "tipos_empleado", "")
+    raw = (cfg.valor or "").strip()
+    if not raw:
+        return []
+    return [line.strip() for line in raw.splitlines() if line.strip()]
+
+
+def opciones_select_tipo_empleado(
+    empresa_id: int | None, valor_actual: str | None
+) -> list[tuple[str, str]]:
+    """Opciones para el desplegable: sin asignar, tipos de empresa y valor huérfano."""
+    opts: list[tuple[str, str]] = [("", "— Sin asignar —")]
+    vac = (valor_actual or "").strip() or None
+    if not empresa_id:
+        if vac:
+            opts.append((vac, vac))
+        return opts
+    tipos = tipos_empleado_configurados(empresa_id)
+    if vac and vac not in tipos:
+        opts.append((vac, f"{vac} (ya no en lista)"))
+    for t in tipos:
+        opts.append((t, t))
+    return opts
+
+
+def validar_tipo_empleado_para_guardar(
+    empresa_id: int | None,
+    valor_formulario: str | None,
+    valor_previo: str | None = None,
+) -> str | None:
+    """Normaliza tipo; comprueba que exista en la lista salvo valor previo igual."""
+    s = (valor_formulario or "").strip()
+    if not s:
+        return None
+    if not empresa_id:
+        raise ValueError(
+            "No hay empresa asociada; no se puede asignar tipo de empleado."
+        )
+    tipos = tipos_empleado_configurados(empresa_id)
+    if s in tipos:
+        return s
+    prev = (valor_previo or "").strip() or None
+    if prev and s == prev:
+        return s
+    raise ValueError(
+        "El tipo de empleado debe figurar en la configuración laboral de la empresa "
+        "(tipos de empleado)."
+    )
 
 
 def crear_empleado_con_usuario(
@@ -65,6 +118,13 @@ def crear_empleado_con_usuario(
     if empresa_id is not None:
         emp_kwargs["empresa_id"] = empresa_id
 
+    te = validar_tipo_empleado_para_guardar(
+        empresa_id,
+        datos.get("tipo_empleado"),
+        None,
+    )
+    emp_kwargs["tipo_empleado"] = te
+
     emp = Empleado(**emp_kwargs)
     db.session.add(emp)
     db.session.flush()
@@ -102,7 +162,14 @@ def actualizar_empleado(empleado: Empleado, datos: dict, nueva_contrasena: str |
     empleado.activo = bool(datos.get("activo", True))
     empleado.centro_trabajo = (datos.get("centro_trabajo") or "").strip() or None
     empleado.responsable_id = datos.get("responsable_id") or None
+    if "responsable_usuario_id" in datos:
+        empleado.responsable_usuario_id = datos.get("responsable_usuario_id") or None
     empleado.observaciones = (datos.get("observaciones") or "").strip() or None
+    empleado.tipo_empleado = validar_tipo_empleado_para_guardar(
+        empleado.empresa_id,
+        datos.get("tipo_empleado"),
+        empleado.tipo_empleado,
+    )
 
     usuario = empleado.usuario
     usuario.correo_electronico = (datos["correo_electronico"] or "").strip().lower()

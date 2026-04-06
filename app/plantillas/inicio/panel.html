@@ -2,92 +2,164 @@
 {% block titulo %}Panel{% endblock %}
 {% block contenido %}
 <div class="container-fluid px-3 pb-5">
-  <h1 class="h3 text-azul-oscuro mt-3 mb-4">Inicio</h1>
+  <h1 class="h3 text-azul-oscuro mt-3 mb-4"></h1>
 
   {# Panel de manager / administración #}
   {% if es_admin_vista and current_user.rol != 'empleado' and datos_admin %}
-  <div class="panel-grid-card mb-4">
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-3">
-          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
-            <div>
-              <h2 class="h6 text-azul-oscuro mb-1">Empleados</h2>
-              <p class="small text-muted mb-3">Gestiona tu base de empleados y roles.</p>
-            </div>
-            <div class="d-flex justify-content-between align-items-end">
-              <span class="small text-muted">Activos: {{ datos_admin.empleados_activos }}</span>
-              <a href="{{ url_for('empleados_bp.listado') }}" class="btn btn-acento btn-sm">Empleados</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
-            <div>
-              <h2 class="h6 text-azul-oscuro mb-1">Fichajes</h2>
-              <p class="small text-muted mb-3">Revisa y corrige fichajes de tu equipo.</p>
-            </div>
-            <div class="d-flex justify-content-between align-items-end">
-              <span class="small text-muted">Hoy: {{ datos_admin.fichajes_hoy }}</span>
-              <a href="{{ url_for('fichajes_bp.listado_admin') }}" class="btn btn-acento btn-sm">Fichajes</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
-            <div>
-              <h2 class="h6 text-azul-oscuro mb-1">Informes</h2>
-              <p class="small text-muted mb-3">Consulta informes de horas y jornadas.</p>
-            </div>
-            <div class="d-flex justify-content-between align-items-end">
-              <span class="small text-muted">Pend. incidencias: {{ datos_admin.incidencias_pendientes }}</span>
-              <a href="{{ url_for('informes_bp.indice') }}" class="btn btn-acento btn-sm">Informes</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
-            <div>
-              <h2 class="h6 text-azul-oscuro mb-1">Vacaciones</h2>
-              <p class="small text-muted mb-3">Aprueba o revisa solicitudes de vacaciones.</p>
-            </div>
-            <div class="d-flex justify-content-between align-items-end">
-              <span class="small text-muted">Pendientes: {{ datos_admin.vacaciones_pendientes }}</span>
-              <a href="{{ url_for('vacaciones_bp.listado_admin') }}" class="btn btn-acento btn-sm">Vacaciones</a>
-            </div>
-          </div>
-        </div>
-        {% if current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
-        <div class="col-md-3">
-          <div class="border rounded-3 h-100 p-3 d-flex flex-column justify-content-between">
-            <div>
-              <h2 class="h6 text-azul-oscuro mb-1">Config. laboral</h2>
-              <p class="small text-muted mb-3">Ajusta reglas laborales de tu empresa.</p>
-            </div>
-            <div class="d-flex justify-content-end align-items-end">
-              <a href="{{ url_for('administracion_bp.configuracion_laboral_empresa') }}" class="btn btn-acento btn-sm">Configuración</a>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-
   <div class="panel-grid-card mt-4">
     <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-2">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
         <div>
           <h2 class="h6 text-azul-oscuro mb-1">Equipo</h2>
           <p class="small text-muted mb-0">
             Jornadas incompletas hoy: {{ datos_admin.jornadas_incompletas }}
           </p>
         </div>
-        <div class="btn-group btn-group-sm" role="group">
-          <a href="{{ url_for('inicio_bp.panel', vista='dia') }}" class="btn {% if vista_equipo == 'dia' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Hoy</a>
-          <a href="{{ url_for('inicio_bp.panel', vista='semana') }}" class="btn {% if vista_equipo == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Semana</a>
-          <a href="{{ url_for('inicio_bp.panel', vista='mes') }}" class="btn {% if vista_equipo == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Mes</a>
+        {% if calendario_equipo %}
+        {% set ev_toggle = 'lista' if equipo_vista_cal == 'calendario' else 'calendario' %}
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          {% if cal_vista == 'mes' %}
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo=vista_equipo, equipo_vista_cal=ev_toggle) }}" class="small link-secondary text-decoration-none text-nowrap">
+            {% if equipo_vista_cal == 'calendario' %}Ver como lista{% else %}Ver como calendario{% endif %}
+          </a>
+          {% else %}
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo=vista_equipo, equipo_vista_cal=ev_toggle) }}" class="small link-secondary text-decoration-none text-nowrap">
+            {% if equipo_vista_cal == 'calendario' %}Ver como lista{% else %}Ver como calendario{% endif %}
+          </a>
+          {% endif %}
+          <div class="btn-group btn-group-sm" role="group" aria-label="Vista calendario">
+            <a href="{% if cal_vista == 'semana' %}{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.lunes.month, anio=calendario_equipo.lunes.year, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% else %}{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% endif %}"
+               class="btn {% if cal_vista == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">
+              Mes
+            </a>
+            <a href="{% if cal_vista == 'mes' and calendario_equipo.celdas %}{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.celdas[0].fecha_iso, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% elif cal_vista == 'semana' %}{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% else %}{{ url_for('inicio_bp.panel', cal_vista='semana', semana=hoy_iso, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% endif %}"
+               class="btn {% if cal_vista == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">
+              Semana
+            </a>
+          </div>
+          {% if cal_vista == 'mes' %}
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.prev.mes, anio=calendario_equipo.prev.anio, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}">« Mes</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.sig.mes, anio=calendario_equipo.sig.anio, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}">Mes »</a>
+          </div>
+          {% else %}
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.prev.semana, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}">« Semana</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.sig.semana, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}">Semana »</a>
+          </div>
+          {% endif %}
         </div>
+        {% endif %}
+      </div>
+
+      {% if calendario_equipo %}
+      <p class="small text-secondary mb-2 text-center">{{ calendario_equipo.titulo }}</p>
+      {% set dias_es = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] %}
+      {% if equipo_vista_cal == 'calendario' %}
+      {% set hdrs_dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] %}
+      <div class="cal-mes cal-mes-equipo mb-2">
+        {% for i in range(7) %}
+        <div class="cal-dia-hdr{% if ((cal_vista == 'mes' and mes_incluye_hoy) or (cal_vista == 'semana' and semana_incluye_hoy)) and i == weekday_hoy %} cal-dia-hdr-hoy{% endif %}">{{ hdrs_dias[i] }}</div>
+        {% endfor %}
+        {% if cal_vista == 'mes' %}
+        {% for _ in range(calendario_equipo.padding_inicio) %}
+        <div class="cal-dia cal-dia-vacio"></div>
+        {% endfor %}
+        {% endif %}
+        {% for c in calendario_equipo.celdas %}
+        <button type="button"
+                class="cal-equipo-celda text-start border-0 w-100{% if c.fecha_iso == hoy_iso %} cal-equipo-hoy{% endif %}{% if c.laborables == 0 %} cal-equipo-no-lab{% if c.estilo_no_laborable == 'festivo_bd' %} cal-equipo-nl-festivo-bd{% elif c.estilo_no_laborable == 'sabado' %} cal-equipo-nl-sabado{% elif c.estilo_no_laborable == 'domingo' %} cal-equipo-nl-domingo{% endif %}{% endif %}"
+                data-fecha-iso="{{ c.fecha_iso }}"
+                data-bs-toggle="modal"
+                data-bs-target="#modalDiaEquipo">
+          <div class="d-flex align-items-start justify-content-between gap-1 w-100">
+            <span class="cal-equipo-dia-num">{{ c.dia }}</span>
+            {% if c.fecha_iso == hoy_iso %}
+            <span class="badge rounded-pill bg-primary cal-equipo-badge-hoy">Hoy</span>
+            {% endif %}
+          </div>
+          {% if c.laborables > 0 %}
+          <div class="cal-equipo-stats">
+            <span class="cal-equipo-st-v" title="En jornada o con horas fichadas ese día">Trab.: {{ c.vinieron }}</span>
+            <span class="text-muted"> · </span>
+            <span class="cal-equipo-st-n" title="Laborables sin fichajes ese día (o pendientes de completar)">No: {{ c.no_vinieron }}</span>
+          </div>
+          {% else %}
+          <span class="cal-equipo-stats text-muted">—</span>
+          {% endif %}
+        </button>
+        {% endfor %}
+        {% if cal_vista == 'mes' %}
+        {% for _ in range(calendario_equipo.padding_fin) %}
+        <div class="cal-dia cal-dia-vacio"></div>
+        {% endfor %}
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="table-responsive mb-2 cal-equipo-lista-wrap">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Día</th>
+              <th>Fecha</th>
+              <th class="text-end">Trab.</th>
+              <th class="text-end">No</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in calendario_equipo.celdas %}
+            <tr class="{% if c.fecha_iso == hoy_iso %}table-primary{% endif %}">
+              <td>{{ dias_es[c.weekday] }}</td>
+              <td>
+                {{ c.fecha.strftime('%d/%m/%Y') }}
+                {% if c.fecha_iso == hoy_iso %}
+                <span class="badge rounded-pill bg-primary ms-1">Hoy</span>
+                {% endif %}
+              </td>
+              <td class="text-end text-success">{{ c.vinieron }}</td>
+              <td class="text-end text-danger">{{ c.no_vinieron }}</td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0"
+                        data-fecha-iso="{{ c.fecha_iso }}"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalDiaEquipo">Detalle</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      <p class="small text-muted mb-0 text-center">
+        En días laborables: <strong>Trab.</strong> = quienes están en jornada o ya tienen horas fichadas;
+        <strong>No</strong> = laborables sin actividad registrada ese día.
+        Pulse un día o <strong>Detalle</strong> para ver el listado.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel-grid-card mt-4">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+          <h2 class="h6 text-azul-oscuro mb-1">Empleados</h2>
+          <p class="small text-muted mb-0">Estado y horas según el periodo seleccionado.</p>
+        </div>
+        {% if calendario_equipo %}
+        <div class="btn-group btn-group-sm" role="group" aria-label="Periodo horas listado">
+          {% if cal_vista == 'mes' %}
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo='dia', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'dia' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Hoy</a>
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo='semana', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Semana</a>
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo='mes', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Mes</a>
+          {% else %}
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo='dia', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'dia' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Hoy</a>
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo='semana', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Semana</a>
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo='mes', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Mes</a>
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
@@ -96,7 +168,7 @@
               <th>Empleado</th>
               <th>Empresa</th>
               <th>Estado</th>
-              <th class="text-end">Horas {{ 'hoy' if vista_equipo == 'dia' else ('semana' if vista_equipo == 'semana' else 'mes') }}</th>
+              <th class="text-end">Horas {% if vista_equipo == 'dia' %}hoy{% elif vista_equipo == 'semana' %}semana{% else %}mes{% endif %}</th>
             </tr>
           </thead>
           <tbody>
@@ -114,13 +186,137 @@
               <td class="text-end">{{ e.horas }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="text-muted small">Sin empleados activos.</td></tr>
+            <tr><td colspan="4" class="text-muted small">Sin empleados en tu alcance.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
   </div>
+
+  <div class="modal fade" id="modalDiaEquipo" tabindex="-1" aria-labelledby="modalDiaEquipoTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="modalDiaEquipoTitulo">Detalle del día</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body" id="modalDiaEquipoBody">
+          <p class="text-muted small" id="modalDiaEquipoCargando">Cargando…</p>
+          <div id="modalDiaEquipoContenido" class="d-none">
+            <div id="secDentroFuera" class="mb-3">
+              <h3 class="h6 text-azul-oscuro">Hoy en tiempo real</h3>
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <p class="small text-muted mb-1">Dentro (horas acumuladas)</p>
+                  <ul class="list-unstyled small mb-0" id="listaDentro"></ul>
+                </div>
+                <div class="col-md-6">
+                  <p class="small text-muted mb-1">Fuera / sin fichar entrada</p>
+                  <ul class="list-unstyled small mb-0" id="listaFuera"></ul>
+                </div>
+              </div>
+            </div>
+            <h3 class="h6 text-azul-oscuro">Resumen del día</h3>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <p class="small text-muted mb-1">Trabajaron (jornada registrada)</p>
+                <ul class="list-unstyled small" id="listaTrabajaron"></ul>
+              </div>
+              <div class="col-md-6">
+                <p class="small text-muted mb-1">Pendientes / falta</p>
+                <ul class="list-unstyled small" id="listaPendientes"></ul>
+              </div>
+              <div class="col-md-6">
+                <p class="small text-muted mb-1">Vacaciones</p>
+                <ul class="list-unstyled small" id="listaVacaciones"></ul>
+              </div>
+              <div class="col-md-6">
+                <p class="small text-muted mb-1">Día libre</p>
+                <ul class="list-unstyled small" id="listaLibre"></ul>
+              </div>
+              <div class="col-12">
+                <p class="small text-muted mb-1">Ausencias</p>
+                <ul class="list-unstyled small mb-0" id="listaAusencias"></ul>
+              </div>
+            </div>
+          </div>
+          <p class="text-danger small d-none" id="modalDiaEquipoError"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    const apiTpl = {{ (url_for('inicio_bp.api_dia_equipo', fecha_iso='__ISO__') | tojson) }};
+    const modalEl = document.getElementById('modalDiaEquipo');
+    if (!modalEl) return;
+
+    function llenarUl(id, items, fnTexto) {
+      const ul = document.getElementById(id);
+      if (!ul) return;
+      ul.replaceChildren();
+      if (!items || !items.length) {
+        const li = document.createElement('li');
+        li.className = 'text-muted';
+        li.textContent = 'Nadie';
+        ul.appendChild(li);
+        return;
+      }
+      for (const it of items) {
+        const li = document.createElement('li');
+        li.textContent = fnTexto(it);
+        ul.appendChild(li);
+      }
+    }
+
+    modalEl.addEventListener('show.bs.modal', function (ev) {
+      const btn = ev.relatedTarget;
+      const fechaIso = btn && btn.getAttribute('data-fecha-iso');
+      if (!fechaIso) return;
+      const cargando = document.getElementById('modalDiaEquipoCargando');
+      const contenido = document.getElementById('modalDiaEquipoContenido');
+      const err = document.getElementById('modalDiaEquipoError');
+      const secDF = document.getElementById('secDentroFuera');
+      if (cargando) cargando.classList.remove('d-none');
+      if (contenido) contenido.classList.add('d-none');
+      if (err) { err.classList.add('d-none'); err.textContent = ''; }
+      fetch(apiTpl.replace('__ISO__', fechaIso), { credentials: 'same-origin' })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (_ref) {
+          if (!cargando) return;
+          cargando.classList.add('d-none');
+          if (!_ref.ok) {
+            if (err) {
+              err.textContent = _ref.j && _ref.j.error ? _ref.j.error : 'No se pudo cargar el detalle.';
+              err.classList.remove('d-none');
+            }
+            return;
+          }
+          const d = _ref.j;
+          const titulo = document.getElementById('modalDiaEquipoTitulo');
+          if (titulo) titulo.textContent = 'Equipo · ' + (d.fecha_texto || fechaIso);
+          if (secDF) secDF.style.display = d.es_hoy ? 'block' : 'none';
+          llenarUl('listaDentro', d.dentro_ahora, function (x) { return x.nombre + (x.horas != null ? ' · ' + x.horas + ' h' : ''); });
+          llenarUl('listaFuera', d.fuera_ahora, function (x) { return x.nombre + (x.horas != null ? ' · ' + x.horas + ' h' : ''); });
+          llenarUl('listaTrabajaron', d.trabajaron, function (x) { return x.nombre + (x.horas != null ? ' · ' + x.horas + ' h' : ''); });
+          llenarUl('listaPendientes', d.pendientes, function (x) { return x.nombre; });
+          llenarUl('listaVacaciones', d.vacaciones, function (x) { return x.nombre; });
+          llenarUl('listaLibre', d.libre, function (x) { return x.nombre + (x.motivo ? ' · ' + x.motivo : ''); });
+          llenarUl('listaAusencias', d.ausencias, function (x) { return x.nombre + ' · ' + x.tipo + (x.motivo ? ' · ' + x.motivo : ''); });
+          if (contenido) contenido.classList.remove('d-none');
+        })
+        .catch(function () {
+          if (cargando) cargando.classList.add('d-none');
+          if (err) {
+            err.textContent = 'Error de red.';
+            err.classList.remove('d-none');
+          }
+        });
+    });
+  })();
+  </script>
   {% endif %}
 
   {# Panel de empleado (solo para usuarios con rol empleado) #}

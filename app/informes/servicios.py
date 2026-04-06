@@ -24,12 +24,27 @@ class FiltrosInforme:
     incluir_festivas: bool = True
     solo_incidencias: bool = False
     solo_incompletos: bool = False
+    # Alcance (no superadmin): empresa y/o equipo del responsable
+    empresa_id_alcance: Optional[int] = None
+    responsable_usuario_id_equipo: Optional[int] = None
+    responsable_empleado_id_legacy: Optional[int] = None
 
 
 def empleados_filtrados(f: FiltrosInforme) -> List[Empleado]:
     """Lista de empleados según filtros de informe."""
+    from sqlalchemy import or_
+
     q = Empleado.query.filter_by(activo=True)
-    if f.empleado_id:
+    if f.empresa_id_alcance is not None:
+        q = q.filter(Empleado.empresa_id == f.empresa_id_alcance)
+    if f.responsable_usuario_id_equipo is not None:
+        cond_eq = [Empleado.responsable_usuario_id == f.responsable_usuario_id_equipo]
+        if f.responsable_empleado_id_legacy is not None:
+            cond_eq.append(
+                Empleado.responsable_id == f.responsable_empleado_id_legacy
+            )
+        q = q.filter(or_(*cond_eq))
+    if f.empleado_id is not None:
         q = q.filter(Empleado.id == f.empleado_id)
     if f.centro_trabajo:
         q = q.filter(Empleado.centro_trabajo == f.centro_trabajo)

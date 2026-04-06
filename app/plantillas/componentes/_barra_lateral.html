@@ -12,7 +12,7 @@
   {% endif %}
   {% endif %}
   {% if current_user.is_authenticated and current_user.rol in ['administrador_empresa','responsable'] %}
-  <a class="nav-link" href="{{ url_for('vacaciones_bp.listado_admin') }}">Vacaciones (admin)</a>
+  <a class="nav-link" href="{{ url_for('vacaciones_bp.listado_admin') }}">Vacaciones (gestión)</a>
   <a class="nav-link" href="{{ url_for('administracion_bp.configuracion_laboral_empresa') }}">Configuración laboral empresa</a>
   {% endif %}
   {% if current_user.is_authenticated and current_user.rol == 'empleado' and current_user.empleado %}

@@ -16,9 +16,11 @@
       {{ form_manual.enviar(class="btn btn-acento mt-3") }}
     </div>
   </form>
-  <h2 class="h6">Pendientes</h2>
-  <div class="table-responsive">
-    <table class="table table-sm"><thead><tr><th>Empleado</th><th>Fechas</th><th></th></tr></thead>
+
+  <h2 class="h6">Pendientes de aprobación</h2>
+  <p class="small text-muted mb-2">Solo solicitudes en estado pendiente; use «Resolver» para aprobar o rechazar.</p>
+  <div class="table-responsive card border-0 shadow-sm mb-4">
+    <table class="table table-sm mb-0"><thead><tr><th>Empleado</th><th>Fechas</th><th></th></tr></thead>
       <tbody>
         {% for s in pendientes %}
         <tr>
@@ -26,7 +28,54 @@
           <td>{{ s.fecha_inicio|fecha_es }} — {{ s.fecha_fin|fecha_es }}</td>
           <td><a href="{{ url_for('vacaciones_bp.resolver', solicitud_id=s.id) }}">Resolver</a></td>
         </tr>
-        {% else %}<tr><td colspan="3">Ninguna</td></tr>{% endfor %}
+        {% else %}<tr><td colspan="3" class="text-muted">Ninguna pendiente</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="h6">Listado de vacaciones</h2>
+  <p class="small text-muted mb-2">Todas las solicitudes registradas en su ámbito (incluye aprobadas, manuales y disfrutadas), ordenadas por fecha de inicio.</p>
+  <div class="table-responsive card border-0 shadow-sm">
+    <table class="table table-sm mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Empleado</th>
+          <th>Inicio</th>
+          <th>Fin</th>
+          <th class="text-end">Días</th>
+          <th>Estado</th>
+          <th class="d-none d-md-table-cell">Notas</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in listado_vacaciones %}
+        <tr>
+          <td>{{ s.empleado.nombre_completo }}</td>
+          <td>{{ s.fecha_inicio|fecha_es }}</td>
+          <td>{{ s.fecha_fin|fecha_es }}</td>
+          <td class="text-end">{{ s.numero_dias }}</td>
+          <td>
+            {% if s.estado == 'pendiente' %}
+            <span class="badge bg-warning text-dark">Pendiente</span>
+            {% elif s.estado == 'aprobado' %}
+            <span class="badge bg-success">Aprobado</span>
+            {% elif s.estado == 'rechazado' %}
+            <span class="badge bg-secondary">Rechazado</span>
+            {% elif s.estado == 'disfrutado' %}
+            <span class="badge bg-info text-dark">Disfrutado</span>
+            {% else %}<span class="badge bg-light text-dark border">{{ s.estado }}</span>{% endif %}
+          </td>
+          <td class="small text-muted d-none d-md-table-cell">{{ (s.notas or '')[:80] }}{% if s.notas and s.notas|length > 80 %}…{% endif %}</td>
+          <td>
+            {% if s.estado == 'pendiente' %}
+            <a href="{{ url_for('vacaciones_bp.resolver', solicitud_id=s.id) }}">Resolver</a>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-muted">No hay solicitudes registradas.</td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
