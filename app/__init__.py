@@ -147,7 +147,11 @@ def registrar_blueprints(app: Flask) -> None:
 
 def registrar_filtros_jinja(app: Flask) -> None:
     """Fechas en plantillas: dd/mm/aaaa y dd/mm/aaaa hh:mm[:ss]."""
-    from app.utilidades.fechas import formatear_fecha, formatear_fecha_hora
+    from app.utilidades.fechas import (
+        formatear_fecha,
+        formatear_fecha_hora,
+        formatear_horas_hhmm,
+    )
 
     app.jinja_env.filters["fecha_es"] = formatear_fecha
 
@@ -155,6 +159,7 @@ def registrar_filtros_jinja(app: Flask) -> None:
         return formatear_fecha_hora(valor, con_segundos=con_segundos)
 
     app.jinja_env.filters["fecha_hora_es"] = _fecha_hora_filtro
+    app.jinja_env.filters["horas_hhmm"] = formatear_horas_hhmm
 
 
 def registrar_manejadores_error(app: Flask) -> None:

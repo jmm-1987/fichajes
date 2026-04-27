@@ -1,6 +1,6 @@
 # Manual de despliegue en VPS (Ubuntu 24.04 LTS)
 
-Guía para publicar la aplicación de **control horario** (Flask) en un servidor con **Ubuntu 24.04**, **Nginx**, **Gunicorn** y opcionalmente **PostgreSQL**. Rutas de ejemplo: instalación en `/srv/fichajes` y usuario de sistema `fichajes`.
+Guía para publicar la aplicación de **control horario** (Flask) en un servidor con **Ubuntu 24.04**, **Nginx**, **Gunicorn** y **PostgreSQL recomendado** (SQLite solo para escenarios pequeños). Rutas de ejemplo: instalación en `/srv/fichajes` y usuario de sistema `fichajes`.
 
 ## 1. Resumen de arquitectura
 
@@ -171,3 +171,15 @@ sudo systemctl start fichajes
 | SQLite locked / permisos | Propietario `fichajes` en `datos/` |
 
 Más detalle en `docs/NOTAS_LEGALES.md` y `.env.example`.
+
+## 16. Migración desde SQLite a PostgreSQL
+
+Para proyectos ya en marcha con SQLite:
+
+1. Hacer backup del fichero `.db`.
+2. Configurar PostgreSQL y `DATABASE_URL` en `.env`.
+3. Ejecutar `flask db upgrade` sobre PostgreSQL.
+4. Migrar datos con script ETL controlado y validar conteos por tabla.
+5. Cambiar servicio a PostgreSQL y dejar SQLite solo como respaldo histórico.
+
+Guía específica: `docs/GUIA_POSTGRESQL.md`.

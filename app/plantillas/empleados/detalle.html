@@ -25,9 +25,9 @@
         <div class="card-body">
           <h2 class="h6 text-secondary">Resumen mes</h2>
           <ul class="list-unstyled small mb-0">
-            <li>Horas trabajadas: <strong>{{ resumen_mes.horas_trabajadas }}</strong></li>
-            <li>Normales: {{ resumen_mes.horas_normales }} · Extras: {{ resumen_mes.horas_extras }}</li>
-            <li>Nocturnas: {{ resumen_mes.horas_nocturnas }} · Festivas: {{ resumen_mes.horas_festivas }}</li>
+            <li>Horas trabajadas: <strong>{{ resumen_mes.horas_trabajadas|horas_hhmm }}</strong></li>
+            <li>Normales: {{ resumen_mes.horas_normales|horas_hhmm }} · Extras: {{ resumen_mes.horas_extras|horas_hhmm }}</li>
+            <li>Nocturnas: {{ resumen_mes.horas_nocturnas|horas_hhmm }} · Festivas: {{ resumen_mes.horas_festivas|horas_hhmm }}</li>
             <li>Días incompletos: {{ resumen_mes.dias_incompletos }}</li>
           </ul>
         </div>

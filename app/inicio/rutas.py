@@ -54,6 +54,7 @@ def panel():
     resumen_equipo: list[dict] = []
     vista_equipo = "dia"
     equipo_vista_cal = "calendario"
+    solo_hoy = request.args.get("solo_hoy", "0") == "1"
 
     if es_admin and rol != RolUsuario.EMPLEADO:
         datos_admin = resumen_panel_administrador()
@@ -68,6 +69,9 @@ def panel():
         cal_vista = request.args.get("cal_vista", "mes")
         if cal_vista not in ("mes", "semana"):
             cal_vista = "mes"
+        if solo_hoy:
+            # Modo control diario: centra siempre en la semana de hoy.
+            cal_vista = "semana"
         if cal_vista == "mes":
             mes = request.args.get("mes", type=int) or hoy.month
             anio = request.args.get("anio", type=int) or hoy.year
@@ -112,6 +116,7 @@ def panel():
         resumen_equipo=resumen_equipo,
         vista_equipo=vista_equipo,
         equipo_vista_cal=equipo_vista_cal,
+        solo_hoy=solo_hoy,
         hoy_iso=hoy.isoformat(),
         weekday_hoy=hoy.weekday(),
         mes_incluye_hoy=mes_incluye_hoy,

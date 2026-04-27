@@ -5,6 +5,7 @@ Formato de fechas en español (dd/mm/aaaa) y zona Europe/Madrid para fechas-hora
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Optional, Union
 from zoneinfo import ZoneInfo
 
@@ -106,3 +107,29 @@ def periodo_texto(fecha_inicio: date, fecha_fin: date) -> str:
 def valor_fecha_hora_edicion(dt: datetime) -> str:
     """Cadena para rellenar un DateTimeField en español (Madrid)."""
     return _a_madrid_naive(dt).strftime(FORMATO_FECHA_HORA_SEG)
+
+
+def formatear_horas_hhmm(valor: Optional[Union[int, float, Decimal, str]]) -> str:
+    """
+    Convierte horas decimales a formato HH:MM.
+    Ejemplo: 1.5 -> 01:30
+    """
+    if valor is None:
+        return "00:00"
+    try:
+        if isinstance(valor, str):
+            normalizado = valor.strip().replace(",", ".")
+            if not normalizado:
+                return "00:00"
+            horas_decimal = Decimal(normalizado)
+        else:
+            horas_decimal = Decimal(str(valor))
+    except (InvalidOperation, ValueError):
+        return "00:00"
+
+    negativo = horas_decimal < 0
+    total_minutos = int((abs(horas_decimal) * Decimal("60")).quantize(Decimal("1")))
+    horas = total_minutos // 60
+    minutos = total_minutos % 60
+    prefijo = "-" if negativo else ""
+    return f"{prefijo}{horas}:{minutos:02d}"

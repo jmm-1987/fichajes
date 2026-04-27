@@ -5,7 +5,7 @@ Aplicación para **registro horario** de personas trabajadoras en instalaciones 
 ## Stack
 
 - Python 3.12, Flask, SQLAlchemy, Flask-Migrate, Flask-Login, Flask-WTF
-- SQLite por defecto (configurable por `DATABASE_URL`)
+- PostgreSQL o SQLite (por defecto SQLite; configurable por `DATABASE_URL`)
 - Bootstrap 5 (CDN), HTMX, Alpine.js, CSS propio
 - Tests con pytest
 
@@ -46,6 +46,8 @@ Si ya usó `scripts/inicializar_bd.py`, puede eliminar la BD y volver a crear co
 ## Despliegue en VPS (Ubuntu 24.04)
 
 Manual completo: [docs/MANUAL_DESPLIEGUE_VPS_UBUNTU_24.md](docs/MANUAL_DESPLIEGUE_VPS_UBUNTU_24.md) (Nginx, Gunicorn, systemd, Let’s Encrypt, SQLite o PostgreSQL).
+
+Guía recomendada para producción con PostgreSQL: [docs/GUIA_POSTGRESQL.md](docs/GUIA_POSTGRESQL.md).
 
 Guía **paso a paso con todos los comandos**, usuario **root** y dominio **fichajes.jm2-tech.es**: [docs/DESPLIEGUE_PASO_A_PASO_ROOT_JM2.md](docs/DESPLIEGUE_PASO_A_PASO_ROOT_JM2.md).
 

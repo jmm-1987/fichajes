@@ -5,9 +5,11 @@ from flask import (
     abort,
     current_app,
     flash,
+    make_response,
     redirect,
     render_template,
     request,
+    send_from_directory,
     session,
     url_for,
 )
@@ -42,6 +44,49 @@ def _kiosk_habilitado() -> bool:
 def _abort_si_deshabilitado():
     if not _kiosk_habilitado():
         abort(404)
+
+
+@fichaje_publico_bp.route("/manifest.webmanifest")
+def manifest():
+    """Manifest PWA para instalar el fichaje público en móviles."""
+    _abort_si_deshabilitado()
+    contenido = {
+        "name": "Control horario - Fichaje",
+        "short_name": "Fichaje",
+        "description": "Fichaje público rápido desde móvil.",
+        "lang": "es-ES",
+        "start_url": url_for("fichaje_publico_bp.inicio"),
+        "scope": url_for("fichaje_publico_bp.inicio"),
+        "display": "standalone",
+        "background_color": "#f8f9fa",
+        "theme_color": "#1b3a5c",
+        "icons": [
+            {
+                "src": url_for("static", filename="img/logo-jm.png"),
+                "sizes": "192x192",
+                "type": "image/png",
+            },
+            {
+                "src": url_for("static", filename="img/logo-jm-completo.png"),
+                "sizes": "512x512",
+                "type": "image/png",
+            },
+        ],
+    }
+    resp = make_response(contenido)
+    resp.headers["Content-Type"] = "application/manifest+json"
+    return resp
+
+
+@fichaje_publico_bp.route("/sw.js")
+def service_worker():
+    """Service Worker de fichaje público (scope /fichaje-publico/)."""
+    _abort_si_deshabilitado()
+    return send_from_directory(
+        current_app.static_folder,
+        "js/sw-fichaje-publico.js",
+        mimetype="application/javascript",
+    )
 
 
 @fichaje_publico_bp.route("/", methods=["GET", "POST"])

@@ -24,8 +24,8 @@
       <div class="card border-0 shadow-sm resumen-dia">
         <div class="card-body">
           <p class="small text-muted mb-1">Hoy</p>
-          <p class="h2 text-azul-oscuro mb-0">{{ resumen.horas_trabajadas }} h</p>
-          <p class="small mb-0 mt-2">Normales {{ resumen.horas_normales }} · Extras {{ resumen.horas_extras }}</p>
+          <p class="h2 text-azul-oscuro mb-0">{{ resumen.horas_trabajadas|horas_hhmm }}</p>
+          <p class="small mb-0 mt-2">Normales {{ resumen.horas_normales|horas_hhmm }} · Extras {{ resumen.horas_extras|horas_hhmm }}</p>
           {% if resumen.jornada_incompleta %}<p class="text-warning small mb-0 mt-2">Jornada incompleta</p>{% endif %}
         </div>
       </div>

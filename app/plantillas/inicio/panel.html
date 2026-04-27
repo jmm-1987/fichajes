@@ -19,33 +19,40 @@
         {% set ev_toggle = 'lista' if equipo_vista_cal == 'calendario' else 'calendario' %}
         <div class="d-flex flex-wrap align-items-center gap-2">
           {% if cal_vista == 'mes' %}
-          <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo=vista_equipo, equipo_vista_cal=ev_toggle) }}" class="small link-secondary text-decoration-none text-nowrap">
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo=vista_equipo, equipo_vista_cal=ev_toggle, solo_hoy=1 if solo_hoy else 0) }}" class="small link-secondary text-decoration-none text-nowrap">
             {% if equipo_vista_cal == 'calendario' %}Ver como lista{% else %}Ver como calendario{% endif %}
           </a>
           {% else %}
-          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo=vista_equipo, equipo_vista_cal=ev_toggle) }}" class="small link-secondary text-decoration-none text-nowrap">
+          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo=vista_equipo, equipo_vista_cal=ev_toggle, solo_hoy=1 if solo_hoy else 0) }}" class="small link-secondary text-decoration-none text-nowrap">
             {% if equipo_vista_cal == 'calendario' %}Ver como lista{% else %}Ver como calendario{% endif %}
           </a>
           {% endif %}
           <div class="btn-group btn-group-sm" role="group" aria-label="Vista calendario">
-            <a href="{% if cal_vista == 'semana' %}{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.lunes.month, anio=calendario_equipo.lunes.year, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% else %}{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% endif %}"
-               class="btn {% if cal_vista == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">
+            <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=hoy_iso, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=1) }}"
+               class="btn {% if solo_hoy %}btn-acento{% else %}btn-outline-secondary{% endif %}">
+              Hoy
+            </a>
+            <a href="{% if cal_vista == 'semana' %}{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.lunes.month, anio=calendario_equipo.lunes.year, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=0) }}{% else %}{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=0) }}{% endif %}"
+               class="btn {% if cal_vista == 'mes' and not solo_hoy %}btn-acento{% else %}btn-outline-secondary{% endif %}">
               Mes
             </a>
-            <a href="{% if cal_vista == 'mes' and calendario_equipo.celdas %}{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.celdas[0].fecha_iso, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% elif cal_vista == 'semana' %}{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% else %}{{ url_for('inicio_bp.panel', cal_vista='semana', semana=hoy_iso, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}{% endif %}"
-               class="btn {% if cal_vista == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">
+            <a href="{% if cal_vista == 'mes' and calendario_equipo.celdas %}{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.celdas[0].fecha_iso, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=0) }}{% elif cal_vista == 'semana' %}{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=0) }}{% else %}{{ url_for('inicio_bp.panel', cal_vista='semana', semana=hoy_iso, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=0) }}{% endif %}"
+               class="btn {% if cal_vista == 'semana' and not solo_hoy %}btn-acento{% else %}btn-outline-secondary{% endif %}">
               Semana
             </a>
           </div>
+          {% if solo_hoy %}
+          <span class="badge rounded-pill text-bg-warning">Control de hoy</span>
+          {% endif %}
           {% if cal_vista == 'mes' %}
           <div class="btn-group btn-group-sm">
-            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.prev.mes, anio=calendario_equipo.prev.anio, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}">« Mes</a>
-            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.sig.mes, anio=calendario_equipo.sig.anio, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}">Mes »</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.prev.mes, anio=calendario_equipo.prev.anio, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=0) }}">« Mes</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.sig.mes, anio=calendario_equipo.sig.anio, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=0) }}">Mes »</a>
           </div>
           {% else %}
           <div class="btn-group btn-group-sm">
-            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.prev.semana, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}">« Semana</a>
-            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.sig.semana, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal) }}">Semana »</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.prev.semana, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=1 if solo_hoy else 0) }}">« Semana</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.sig.semana, vista_equipo=vista_equipo, equipo_vista_cal=equipo_vista_cal, solo_hoy=1 if solo_hoy else 0) }}">Semana »</a>
           </div>
           {% endif %}
         </div>
@@ -54,19 +61,27 @@
 
       {% if calendario_equipo %}
       <p class="small text-secondary mb-2 text-center">{{ calendario_equipo.titulo }}</p>
+      {% if solo_hoy %}
+      <p class="small text-muted mb-2 text-center">Mostrando solo el día actual para control rápido de fichajes e incidencias.</p>
+      {% endif %}
       {% set dias_es = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] %}
+      {% if solo_hoy %}
+      {% set celdas_vista = calendario_equipo.celdas | selectattr('fecha_iso', 'equalto', hoy_iso) | list %}
+      {% else %}
+      {% set celdas_vista = calendario_equipo.celdas %}
+      {% endif %}
       {% if equipo_vista_cal == 'calendario' %}
       {% set hdrs_dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] %}
       <div class="cal-mes cal-mes-equipo mb-2">
         {% for i in range(7) %}
         <div class="cal-dia-hdr{% if ((cal_vista == 'mes' and mes_incluye_hoy) or (cal_vista == 'semana' and semana_incluye_hoy)) and i == weekday_hoy %} cal-dia-hdr-hoy{% endif %}">{{ hdrs_dias[i] }}</div>
         {% endfor %}
-        {% if cal_vista == 'mes' %}
+        {% if cal_vista == 'mes' and not solo_hoy %}
         {% for _ in range(calendario_equipo.padding_inicio) %}
         <div class="cal-dia cal-dia-vacio"></div>
         {% endfor %}
         {% endif %}
-        {% for c in calendario_equipo.celdas %}
+        {% for c in celdas_vista %}
         <button type="button"
                 class="cal-equipo-celda text-start border-0 w-100{% if c.fecha_iso == hoy_iso %} cal-equipo-hoy{% endif %}{% if c.laborables == 0 %} cal-equipo-no-lab{% if c.estilo_no_laborable == 'festivo_bd' %} cal-equipo-nl-festivo-bd{% elif c.estilo_no_laborable == 'sabado' %} cal-equipo-nl-sabado{% elif c.estilo_no_laborable == 'domingo' %} cal-equipo-nl-domingo{% endif %}{% endif %}"
                 data-fecha-iso="{{ c.fecha_iso }}"
@@ -89,7 +104,7 @@
           {% endif %}
         </button>
         {% endfor %}
-        {% if cal_vista == 'mes' %}
+        {% if cal_vista == 'mes' and not solo_hoy %}
         {% for _ in range(calendario_equipo.padding_fin) %}
         <div class="cal-dia cal-dia-vacio"></div>
         {% endfor %}
@@ -108,7 +123,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for c in calendario_equipo.celdas %}
+            {% for c in celdas_vista %}
             <tr class="{% if c.fecha_iso == hoy_iso %}table-primary{% endif %}">
               <td>{{ dias_es[c.weekday] }}</td>
               <td>
@@ -183,7 +198,7 @@
                 <span class="badge bg-secondary">Fuera</span>
                 {% endif %}
               </td>
-              <td class="text-end">{{ e.horas }}</td>
+              <td class="text-end">{{ e.horas|horas_hhmm }}</td>
             </tr>
             {% else %}
             <tr><td colspan="4" class="text-muted small">Sin empleados en tu alcance.</td></tr>
@@ -298,9 +313,18 @@
           const titulo = document.getElementById('modalDiaEquipoTitulo');
           if (titulo) titulo.textContent = 'Equipo · ' + (d.fecha_texto || fechaIso);
           if (secDF) secDF.style.display = d.es_hoy ? 'block' : 'none';
-          llenarUl('listaDentro', d.dentro_ahora, function (x) { return x.nombre + (x.horas != null ? ' · ' + x.horas + ' h' : ''); });
-          llenarUl('listaFuera', d.fuera_ahora, function (x) { return x.nombre + (x.horas != null ? ' · ' + x.horas + ' h' : ''); });
-          llenarUl('listaTrabajaron', d.trabajaron, function (x) { return x.nombre + (x.horas != null ? ' · ' + x.horas + ' h' : ''); });
+          function horasAHHMM(valor) {
+            if (valor == null || valor === '') return null;
+            const n = Number(valor);
+            if (Number.isNaN(n)) return null;
+            const total = Math.round(Math.abs(n) * 60);
+            const hh = String(Math.floor(total / 60));
+            const mm = String(total % 60).padStart(2, '0');
+            return (n < 0 ? '-' : '') + hh + ':' + mm;
+          }
+          llenarUl('listaDentro', d.dentro_ahora, function (x) { const h = horasAHHMM(x.horas); return x.nombre + (h ? ' · ' + h : ''); });
+          llenarUl('listaFuera', d.fuera_ahora, function (x) { const h = horasAHHMM(x.horas); return x.nombre + (h ? ' · ' + h : ''); });
+          llenarUl('listaTrabajaron', d.trabajaron, function (x) { const h = horasAHHMM(x.horas); return x.nombre + (h ? ' · ' + h : ''); });
           llenarUl('listaPendientes', d.pendientes, function (x) { return x.nombre; });
           llenarUl('listaVacaciones', d.vacaciones, function (x) { return x.nombre; });
           llenarUl('listaLibre', d.libre, function (x) { return x.nombre + (x.motivo ? ' · ' + x.motivo : ''); });
@@ -380,11 +404,11 @@
           </div>
           <div class="col-md-4">
             <p class="small text-muted mb-1">Horas hoy</p>
-            <p class="h4 text-azul-oscuro mb-0">{{ datos_empleado.horas_hoy }}</p>
+            <p class="h4 text-azul-oscuro mb-0">{{ datos_empleado.horas_hoy|horas_hhmm }}</p>
           </div>
           <div class="col-md-4">
             <p class="small text-muted mb-1">Horas esta semana</p>
-            <p class="h4 text-azul-oscuro mb-0">{{ datos_empleado.horas_semana }}</p>
+            <p class="h4 text-azul-oscuro mb-0">{{ datos_empleado.horas_semana|horas_hhmm }}</p>
           </div>
         </div>
       </div>

@@ -4,6 +4,8 @@
 
 Guía detallada paso a paso: **[MANUAL_DESPLIEGUE_VPS_UBUNTU_24.md](MANUAL_DESPLIEGUE_VPS_UBUNTU_24.md)** (Nginx, Gunicorn, systemd, TLS, SQLite/PostgreSQL).
 
+Guía rápida recomendada para PostgreSQL: **[GUIA_POSTGRESQL.md](GUIA_POSTGRESQL.md)**.
+
 Archivos de apoyo: `wsgi.py`, `requirements-prod.txt`, `deploy/fichajes.service`, `deploy/nginx-fichajes.conf.example`.
 
 ## Requisitos
@@ -16,7 +18,7 @@ Archivos de apoyo: `wsgi.py`, `requirements-prod.txt`, `deploy/fichajes.service`
 1. Clonar o copiar el proyecto en el servidor del cliente.
 2. `python -m venv .venv` y activar el entorno.
 3. `pip install -r requirements.txt` (en producción también `-r requirements-prod.txt`).
-4. Copiar `.env.example` a `.env` y ajustar `SECRET_KEY` y `DATABASE_URL` (por defecto SQLite en `datos/fichajes.db`). Tras proxy inverso con HTTPS, `DETRAS_DE_PROXY=1`.
+4. Copiar `.env.example` a `.env` y ajustar `SECRET_KEY` y `DATABASE_URL` (en producción, preferible PostgreSQL). Tras proxy inverso con HTTPS, `DETRAS_DE_PROXY=1`.
 5. Inicializar base de datos:
    - Opción rápida: `python scripts/inicializar_bd.py`
    - Opción Alembic: `flask db upgrade` (tras generar migraciones).
@@ -27,5 +29,5 @@ Archivos de apoyo: `wsgi.py`, `requirements-prod.txt`, `deploy/fichajes.service`
 ## Producción
 
 - Usar **Gunicorn** (`wsgi:app`) detrás de **Nginx** y **HTTPS**.
-- Configurar copias de seguridad periódicas del fichero SQLite o del motor elegido.
+- Configurar copias de seguridad periódicas del motor elegido (en producción, PostgreSQL recomendado).
 - Revisar `docs/NOTAS_LEGALES.md` con el asesor laboral del cliente.

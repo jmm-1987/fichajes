@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from flask import Blueprint, make_response, render_template, request
+from flask import Blueprint, flash, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import or_
 
@@ -81,6 +81,23 @@ def _construir_filtros_informe() -> FiltrosInforme:
     )
 
 
+def _validar_regla_periodo_empleado(f: FiltrosInforme) -> str | None:
+    """
+    Regla de negocio:
+    - Informe de un solo día: puede incluir varios empleados.
+    - Informe de varios días: debe ser de un único empleado (empleado_id obligatorio).
+    """
+    if f.fecha_inicio > f.fecha_fin:
+        return "El rango de fechas no es válido (Desde no puede ser mayor que Hasta)."
+    es_un_solo_dia = f.fecha_inicio == f.fecha_fin
+    if not es_un_solo_dia and f.empleado_id is None:
+        return (
+            "Para informes de varios días debe seleccionar un único empleado. "
+            "Para agrupar varios empleados, use un rango de un solo día."
+        )
+    return None
+
+
 @informes_bp.route("/")
 @login_required
 @roles_permitidos(
@@ -90,7 +107,12 @@ def _construir_filtros_informe() -> FiltrosInforme:
 )
 def indice():
     f = _construir_filtros_informe()
-    filas = construir_informe_empleado(f)
+    error_regla = _validar_regla_periodo_empleado(f)
+    if error_regla:
+        flash(error_regla, "aviso")
+        filas = []
+    else:
+        filas = construir_informe_empleado(f)
 
     emp_q = Empleado.query.filter_by(activo=True)
     if f.empresa_id_alcance is not None:
@@ -136,6 +158,10 @@ def indice():
 )
 def exportar_csv_vista():
     f = _construir_filtros_informe()
+    error_regla = _validar_regla_periodo_empleado(f)
+    if error_regla:
+        flash(error_regla, "aviso")
+        return redirect(url_for("informes_bp.indice", **request.args))
     filas = construir_informe_empleado(f)
     data = exportar_csv(filas)
     resp = make_response(data)
@@ -153,6 +179,10 @@ def exportar_csv_vista():
 )
 def exportar_excel_vista():
     f = _construir_filtros_informe()
+    error_regla = _validar_regla_periodo_empleado(f)
+    if error_regla:
+        flash(error_regla, "aviso")
+        return redirect(url_for("informes_bp.indice", **request.args))
     filas = construir_informe_empleado(f)
     data = exportar_excel(filas)
     resp = make_response(data)
@@ -172,6 +202,10 @@ def exportar_excel_vista():
 )
 def exportar_pdf_vista():
     f = _construir_filtros_informe()
+    error_regla = _validar_regla_periodo_empleado(f)
+    if error_regla:
+        flash(error_regla, "aviso")
+        return redirect(url_for("informes_bp.indice", **request.args))
     filas = construir_informe_empleado(f)
     periodo = periodo_texto(f.fecha_inicio, f.fecha_fin)
     data = exportar_pdf(

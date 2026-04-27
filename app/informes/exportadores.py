@@ -13,6 +13,9 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.constantes import TipoRegistroJornada
+from app.utilidades.fechas import ZONA_MADRID, formatear_horas_hhmm
+
 
 _TITULO_PDF_OFICIAL = "Informe de registro de jornada laboral"
 _TITULO_PDF_INDIVIDUAL = "Informe mensual individual"
@@ -31,6 +34,15 @@ def _escape_xml(texto: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )
+
+
+def _hora_hhmm_madrid(dt) -> str:
+    """Hora local Madrid HH:MM para columnas de entrada/salida."""
+    if dt is None:
+        return "—"
+    if getattr(dt, "tzinfo", None) is None:
+        return dt.strftime("%H:%M")
+    return dt.astimezone(ZONA_MADRID).strftime("%H:%M")
 
 
 def exportar_csv(filas: List[dict]) -> bytes:
@@ -58,12 +70,12 @@ def exportar_csv(filas: List[dict]) -> bytes:
             [
                 fila.get("resumen_tipos_dia") or "—",
                 emp.nombre_completo,
-                r.get("horas_trabajadas", 0),
-                r.get("horas_normales", 0),
-                r.get("horas_extras", 0),
-                r.get("horas_nocturnas", 0),
-                r.get("horas_festivas", 0),
-                r.get("horas_nocturnas_festivas", 0),
+                formatear_horas_hhmm(r.get("horas_trabajadas", 0)),
+                formatear_horas_hhmm(r.get("horas_normales", 0)),
+                formatear_horas_hhmm(r.get("horas_extras", 0)),
+                formatear_horas_hhmm(r.get("horas_nocturnas", 0)),
+                formatear_horas_hhmm(r.get("horas_festivas", 0)),
+                formatear_horas_hhmm(r.get("horas_nocturnas_festivas", 0)),
                 r.get("dias_incompletos", 0),
             ]
         )
@@ -93,11 +105,11 @@ def exportar_excel(filas: List[dict]) -> bytes:
             [
                 fila.get("resumen_tipos_dia") or "—",
                 emp.nombre_completo,
-                r.get("horas_trabajadas", 0),
-                r.get("horas_normales", 0),
-                r.get("horas_extras", 0),
-                r.get("horas_nocturnas", 0),
-                r.get("horas_festivas", 0),
+                formatear_horas_hhmm(r.get("horas_trabajadas", 0)),
+                formatear_horas_hhmm(r.get("horas_normales", 0)),
+                formatear_horas_hhmm(r.get("horas_extras", 0)),
+                formatear_horas_hhmm(r.get("horas_nocturnas", 0)),
+                formatear_horas_hhmm(r.get("horas_festivas", 0)),
             ]
         )
     bio = io.BytesIO()
@@ -131,6 +143,12 @@ def exportar_pdf(
         and fecha_inicio is not None
         and fecha_fin is not None
     )
+    dias_periodo = (
+        (fecha_fin - fecha_inicio).days + 1
+        if fecha_inicio is not None and fecha_fin is not None
+        else 0
+    )
+    modo_compacto_mensual = es_pdf_individual_diario and dias_periodo >= 28
     titulo_metadatos = (
         _TITULO_PDF_INDIVIDUAL if es_pdf_individual_diario else (titulo or _TITULO_PDF_OFICIAL)
     )
@@ -139,49 +157,51 @@ def exportar_pdf(
         bio,
         pagesize=A4,
         title=titulo_metadatos,
-        leftMargin=18 * mm,
-        rightMargin=18 * mm,
-        topMargin=14 * mm,
-        bottomMargin=18 * mm,
+        leftMargin=(12 if modo_compacto_mensual else 18) * mm,
+        rightMargin=(12 if modo_compacto_mensual else 18) * mm,
+        topMargin=(8 if modo_compacto_mensual else 14) * mm,
+        bottomMargin=(8 if modo_compacto_mensual else 18) * mm,
     )
     estilos = getSampleStyleSheet()
     estilo_titulo = ParagraphStyle(
         name="TituloCentrado",
         parent=estilos["Title"],
         alignment=TA_CENTER,
-        spaceAfter=18,
+        spaceAfter=8 if modo_compacto_mensual else 18,
         spaceBefore=0,
+        fontSize=14 if modo_compacto_mensual else estilos["Title"].fontSize,
+        leading=16 if modo_compacto_mensual else estilos["Title"].leading,
     )
     estilo_encabezado = ParagraphStyle(
         name="EncabezadoEmpresa",
         parent=estilos["Normal"],
-        fontSize=10,
-        leading=14,
-        spaceAfter=4,
+        fontSize=8 if modo_compacto_mensual else 10,
+        leading=10 if modo_compacto_mensual else 14,
+        spaceAfter=2 if modo_compacto_mensual else 4,
     )
     estilo_encabezado_der = ParagraphStyle(
         name="EncabezadoTrabajadorDer",
         parent=estilos["Normal"],
-        fontSize=10,
-        leading=14,
-        spaceAfter=4,
+        fontSize=8 if modo_compacto_mensual else 10,
+        leading=10 if modo_compacto_mensual else 14,
+        spaceAfter=2 if modo_compacto_mensual else 4,
         alignment=TA_RIGHT,
     )
     estilo_periodo = ParagraphStyle(
         name="Periodo",
         parent=estilos["Normal"],
-        fontSize=10,
+        fontSize=8 if modo_compacto_mensual else 10,
         alignment=TA_CENTER,
-        spaceAfter=14,
+        spaceAfter=5 if modo_compacto_mensual else 14,
     )
     estilo_legal = ParagraphStyle(
         name="Legal",
         parent=estilos["Normal"],
-        fontSize=8,
-        leading=11,
+        fontSize=7 if modo_compacto_mensual else 8,
+        leading=8 if modo_compacto_mensual else 11,
         alignment=TA_JUSTIFY,
-        spaceBefore=8,
-        spaceAfter=10,
+        spaceBefore=3 if modo_compacto_mensual else 8,
+        spaceAfter=4 if modo_compacto_mensual else 10,
     )
     estilo_firma = ParagraphStyle(
         name="Firmas",
@@ -279,7 +299,8 @@ def exportar_pdf(
             )
         )
         elems.append(tabla_enc)
-        elems.append(Spacer(1, 8))
+        if not modo_compacto_mensual:
+            elems.append(Spacer(1, 8))
     else:
         elems.append(
             Paragraph(
@@ -299,7 +320,8 @@ def exportar_pdf(
                 estilo_encabezado,
             )
         )
-        elems.append(Spacer(1, 8))
+        if not modo_compacto_mensual:
+            elems.append(Spacer(1, 8))
 
     if len(filas) != 1 and filas:
         elems.append(
@@ -309,7 +331,8 @@ def exportar_pdf(
                 estilo_encabezado,
             )
         )
-        elems.append(Spacer(1, 8))
+        if not modo_compacto_mensual:
+            elems.append(Spacer(1, 8))
 
     # —— Título oficial centrado ——
     elems.append(
@@ -327,15 +350,15 @@ def exportar_pdf(
         name="ThTablaPdf",
         parent=estilos["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=7,
-        leading=9,
+        fontSize=6 if modo_compacto_mensual else 6.8,
+        leading=7 if modo_compacto_mensual else 8.2,
         textColor=colors.whitesmoke,
     )
     estilo_td_tipo = ParagraphStyle(
         name="TdTipoDiaPdf",
         parent=estilos["Normal"],
-        fontSize=7,
-        leading=9,
+        fontSize=6 if modo_compacto_mensual else 6.8,
+        leading=7 if modo_compacto_mensual else 8.2,
     )
     ancho = A4[0] - 36 * mm
     fila_total_pdf: int | None = None
@@ -348,6 +371,8 @@ def exportar_pdf(
             [
                 Paragraph("Fecha", estilo_th),
                 Paragraph("Tipo<br/>día", estilo_th),
+                Paragraph("Entrada", estilo_th),
+                Paragraph("Salida", estilo_th),
                 Paragraph("Horas<br/>trabajadas", estilo_th),
                 Paragraph("Horas<br/>ordinarias", estilo_th),
                 Paragraph("Horas<br/>extraordinarias", estilo_th),
@@ -359,18 +384,36 @@ def exportar_pdf(
         while d <= fecha_fin:
             det = clasificar_dia(emp_id, d)
             regs = obtener_registros_dia(emp_id, d)
+            entrada = next(
+                (r for r in regs if r.tipo_registro == TipoRegistroJornada.ENTRADA),
+                None,
+            )
+            salida = next(
+                (
+                    r
+                    for r in reversed(regs)
+                    if r.tipo_registro == TipoRegistroJornada.SALIDA
+                ),
+                None,
+            )
             cls = manual_map.get((emp_id, d))
             rlab = resolver_estado_dia_laboral(emp_id, d, manual=cls)
             estado = rlab["estado"]
             tipo_txt = etiqueta_estado_dia_laboral(estado)
+            hora_entrada = (
+                _hora_hhmm_madrid(entrada.fecha_hora_servidor) if entrada else "—"
+            )
+            hora_salida = (
+                _hora_hhmm_madrid(salida.fecha_hora_servidor) if salida else "—"
+            )
             sin_datos_horas = len(regs) == 0 and estado == "pendiente"
             if sin_datos_horas:
                 c_trab = c_norm = c_extra = c_noct = "sin datos"
             else:
-                c_trab = f"{float(det.get('horas_trabajadas', 0)):.2f}"
-                c_norm = f"{float(det.get('horas_normales', 0)):.2f}"
-                c_extra = f"{float(det.get('horas_extras', 0)):.2f}"
-                c_noct = f"{float(det.get('horas_nocturnas', 0)):.2f}"
+                c_trab = formatear_horas_hhmm(det.get("horas_trabajadas", 0))
+                c_norm = formatear_horas_hhmm(det.get("horas_normales", 0))
+                c_extra = formatear_horas_hhmm(det.get("horas_extras", 0))
+                c_noct = formatear_horas_hhmm(det.get("horas_nocturnas", 0))
                 sum_trab += float(det.get("horas_trabajadas", 0))
                 sum_norm += float(det.get("horas_normales", 0))
                 sum_extra += float(det.get("horas_extras", 0))
@@ -380,6 +423,8 @@ def exportar_pdf(
                 [
                     formatear_fecha(d),
                     Paragraph(_escape_xml(tipo_txt), estilo_td_tipo),
+                    hora_entrada,
+                    hora_salida,
                     c_trab,
                     c_norm,
                     c_extra,
@@ -393,6 +438,8 @@ def exportar_pdf(
                 [
                     "—",
                     Paragraph(_escape_xml("—"), estilo_td_tipo),
+                    "—",
+                    "—",
                     "sin datos",
                     "sin datos",
                     "sin datos",
@@ -402,28 +449,32 @@ def exportar_pdf(
         estilo_total = ParagraphStyle(
             name="TdTotalPdf",
             parent=estilos["Normal"],
-            fontSize=8,
+            fontSize=7 if modo_compacto_mensual else 8,
             fontName="Helvetica-Bold",
-            leading=10,
+            leading=8 if modo_compacto_mensual else 10,
         )
         datos.append(
             [
                 Paragraph("<b>Total</b>", estilo_total),
                 "",
-                f"{sum_trab:.2f}",
-                f"{sum_norm:.2f}",
-                f"{sum_extra:.2f}",
-                f"{sum_noct:.2f}",
+                "",
+                "",
+                formatear_horas_hhmm(sum_trab),
+                formatear_horas_hhmm(sum_norm),
+                formatear_horas_hhmm(sum_extra),
+                formatear_horas_hhmm(sum_noct),
             ]
         )
         fila_total_pdf = len(datos) - 1
         col_w = [
-            ancho * 0.11,
-            ancho * 0.26,
+            ancho * 0.10,
+            ancho * 0.20,
+            ancho * 0.09,
+            ancho * 0.09,
             ancho * 0.13,
             ancho * 0.13,
-            ancho * 0.175,
-            ancho * 0.175,
+            ancho * 0.13,
+            ancho * 0.13,
         ]
     else:
         datos = [
@@ -444,10 +495,10 @@ def exportar_pdf(
                 [
                     Paragraph(_escape_xml(tipo_txt), estilo_td_tipo),
                     emp.nombre_completo[:28],
-                    f"{r.get('horas_trabajadas', 0):.2f}",
-                    f"{r.get('horas_normales', 0):.2f}",
-                    f"{r.get('horas_extras', 0):.2f}",
-                    f"{r.get('horas_nocturnas', 0):.2f}",
+                    formatear_horas_hhmm(r.get("horas_trabajadas", 0)),
+                    formatear_horas_hhmm(r.get("horas_normales", 0)),
+                    formatear_horas_hhmm(r.get("horas_extras", 0)),
+                    formatear_horas_hhmm(r.get("horas_nocturnas", 0)),
                 ]
             )
         if len(datos) == 1:
@@ -455,10 +506,10 @@ def exportar_pdf(
                 [
                     Paragraph(_escape_xml("—"), estilo_td_tipo),
                     "Sin datos en el periodo",
-                    "0.00",
-                    "0.00",
-                    "0.00",
-                    "0.00",
+                    "00:00",
+                    "00:00",
+                    "00:00",
+                    "00:00",
                 ]
             )
         col_w = [
@@ -475,10 +526,12 @@ def exportar_pdf(
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0d1b2a")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("FONTSIZE", (0, 0), (-1, -1), 6.6 if modo_compacto_mensual else 7.4),
         ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+        ("TOPPADDING", (0, 0), (-1, -1), 1 if modo_compacto_mensual else 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1 if modo_compacto_mensual else 2),
         (
             "ROWBACKGROUNDS",
             (0, 1),
@@ -492,14 +545,14 @@ def exportar_pdf(
             [
                 ("LINEABOVE", (0, ft), (-1, ft), 0.75, colors.HexColor("#0d1b2a")),
                 ("BACKGROUND", (0, ft), (-1, ft), colors.HexColor("#e9ecef")),
-                ("SPAN", (0, ft), (1, ft)),
+                ("SPAN", (0, ft), (3, ft)),
                 ("FONTNAME", (0, ft), (-1, ft), "Helvetica-Bold"),
-                ("ALIGN", (0, ft), (1, ft), "LEFT"),
+                ("ALIGN", (0, ft), (3, ft), "LEFT"),
             ]
         )
     tabla.setStyle(TableStyle(estilos_tabla))
     elems.append(tabla)
-    elems.append(Spacer(1, 16))
+    elems.append(Spacer(1, 4 if modo_compacto_mensual else 16))
 
     # —— Pie legal y firmas ——
     fe = fecha_emision or date.today()
@@ -510,42 +563,43 @@ def exportar_pdf(
         "La empresa garantiza la veracidad de los datos reflejados."
     )
     elems.append(Paragraph(_escape_xml(texto_legal), estilo_legal))
-    elems.append(Spacer(1, 6))
-    ancho_firmas = A4[0] - 36 * mm
-    mitad = ancho_firmas / 2
-    tab_firmas = Table(
-        [
+    if not modo_compacto_mensual:
+        elems.append(Spacer(1, 6))
+        ancho_firmas = A4[0] - 36 * mm
+        mitad = ancho_firmas / 2
+        tab_firmas = Table(
             [
-                Paragraph(
-                    "Firma de la empresa: _______________________",
-                    estilo_firma_empresa,
-                ),
-                Paragraph(
-                    "Firma del trabajador/a: _______________________",
-                    estilo_firma_trabajador,
-                ),
-            ]
-        ],
-        colWidths=[mitad, mitad],
-    )
-    tab_firmas.setStyle(
-        TableStyle(
-            [
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ]
+                [
+                    Paragraph(
+                        "Firma de la empresa: _______________________",
+                        estilo_firma_empresa,
+                    ),
+                    Paragraph(
+                        "Firma del trabajador/a: _______________________",
+                        estilo_firma_trabajador,
+                    ),
+                ]
+            ],
+            colWidths=[mitad, mitad],
         )
-    )
-    elems.append(tab_firmas)
-    elems.append(
-        Paragraph(
-            "Fecha de emisión: __ / __ / ____",
-            estilo_firma,
+        tab_firmas.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ]
+            )
         )
-    )
+        elems.append(tab_firmas)
+        elems.append(
+            Paragraph(
+                "Fecha de emisión: __ / __ / ____",
+                estilo_firma,
+            )
+        )
     estilo_nota = ParagraphStyle(
         name="NotaPie",
         parent=estilos["Normal"],

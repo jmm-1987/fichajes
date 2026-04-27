@@ -21,9 +21,4 @@
   <a class="nav-link" href="{{ url_for('vacaciones_bp.mis_vacaciones') }}">Mis vacaciones</a>
   <a class="nav-link" href="{{ url_for('empleados_bp.mi_ficha') }}">Mi ficha</a>
   {% endif %}
-  {% if planificacion_habilitada is defined and planificacion_habilitada %}
-  {% if current_user.is_authenticated and current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
-  <a class="nav-link" href="{{ url_for('planificacion_bp.indice') }}">Planificación</a>
-  {% endif %}
-  {% endif %}
 </nav>

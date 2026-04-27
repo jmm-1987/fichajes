@@ -364,28 +364,29 @@
 
 /* Calendario agregado equipo (panel) */
 .cal-mes-equipo {
-  max-width: 960px;
+  max-width: 860px;
   margin-left: auto;
   margin-right: auto;
 }
 
 .cal-equipo-lista-wrap {
-  max-width: 960px;
+  max-width: 860px;
   margin-left: auto;
   margin-right: auto;
+  font-size: 0.92rem;
 }
 
 .cal-equipo-celda {
-  min-height: 4.25rem;
-  padding: 0.35rem 0.25rem;
-  border-radius: 8px;
+  min-height: 3.7rem;
+  padding: 0.25rem 0.2rem;
+  border-radius: 7px;
   border: 1px solid #e5e7eb;
   background: #fff;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 500;
   cursor: pointer;
   transition: filter 0.12s ease, box-shadow 0.12s ease;
@@ -408,9 +409,9 @@
 }
 
 .cal-equipo-badge-hoy {
-  font-size: 0.55rem;
+  font-size: 0.5rem;
   font-weight: 600;
-  padding: 0.12rem 0.35rem;
+  padding: 0.1rem 0.3rem;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -448,14 +449,14 @@
 }
 
 .cal-equipo-dia-num {
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   line-height: 1.2;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.1rem;
 }
 
 .cal-equipo-stats {
-  font-size: 0.65rem;
-  line-height: 1.25;
+  font-size: 0.6rem;
+  line-height: 1.2;
   font-weight: 500;
 }
 
