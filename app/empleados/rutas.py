@@ -4,6 +4,7 @@ from datetime import date
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
 
 from app.constantes import RolUsuario
@@ -364,3 +365,29 @@ def mi_ficha():
         flash("Sin empleado asociado.", "peligro")
         return redirect(url_for("inicio_bp.panel"))
     return redirect(url_for("empleados_bp.detalle", empleado_id=eid))
+
+
+@empleados_bp.route("/<int:empleado_id>/eliminar", methods=["POST"])
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def eliminar(empleado_id: int):
+    """Elimina empleado y su usuario; si hay dependencias, desactiva."""
+    emp = Empleado.query.get_or_404(empleado_id)
+    usuario = emp.usuario
+    try:
+        db.session.delete(emp)
+        if usuario is not None:
+            db.session.delete(usuario)
+        db.session.commit()
+        flash("Empleado eliminado.", "exito")
+    except IntegrityError:
+        db.session.rollback()
+        emp.activo = False
+        if usuario is not None:
+            usuario.activo = False
+        db.session.commit()
+        flash(
+            "No se pudo borrar por dependencias históricas. Se ha desactivado el empleado.",
+            "aviso",
+        )
+    return redirect(url_for("empleados_bp.listado"))

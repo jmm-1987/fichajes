@@ -2,8 +2,10 @@
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
 
 from app.administracion.formularios import (
+    FormularioEditarResponsable,
     FormularioFestivo,
     FormularioHorasNocturnas,
     FormularioManagerEmpresa,
@@ -19,7 +21,7 @@ from app.administracion.servicios import (
 )
 from app.constantes import RolUsuario
 from app.extensiones import db
-from app.modelos import ConfiguracionHorasNocturnas, Empresa, Festivo, Usuario
+from app.modelos import ConfiguracionHorasNocturnas, Empleado, Empresa, Festivo, Usuario
 from app.fichajes.calculos import leer_sabado_domingo_festivo_empresa, leer_sabado_domingo_festivo_global
 from app.utilidades.predicados import roles_permitidos
 
@@ -362,4 +364,64 @@ def listado_responsables():
         .order_by(Usuario.empresa_id.nullsfirst(), Usuario.correo_electronico)
         .all()
     )
-    return render_template("responsables_listado.html", responsables=q)
+    return render_template("responsables_listado.html", responsables=q, Empleado=Empleado)
+
+
+@administracion_bp.route("/responsables/<int:usuario_id>/editar", methods=["GET", "POST"])
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def editar_responsable(usuario_id: int):
+    """Permite a superadmin editar un usuario responsable."""
+    u = Usuario.query.filter_by(id=usuario_id, rol=RolUsuario.RESPONSABLE).first_or_404()
+    form = FormularioEditarResponsable(obj=u)
+
+    if request.method == "GET":
+        form.correo_electronico.data = u.correo_electronico
+        form.activo.data = bool(u.activo)
+
+    if form.validate_on_submit():
+        nuevo_ident = (form.correo_electronico.data or "").strip().lower()
+        existe = Usuario.query.filter(
+            Usuario.correo_electronico == nuevo_ident,
+            Usuario.id != u.id,
+        ).first()
+        if existe:
+            flash("Ya existe otro usuario con ese identificador.", "peligro")
+        else:
+            u.correo_electronico = nuevo_ident
+            u.activo = bool(form.activo.data)
+            nueva_pwd = (form.contrasena.data or "").strip()
+            if nueva_pwd:
+                u.establecer_contrasena(nueva_pwd)
+            db.session.commit()
+            flash("Responsable actualizado.", "exito")
+            return redirect(url_for("administracion_bp.listado_responsables"))
+
+    return render_template("responsable_form.html", formulario=form, responsable=u)
+
+
+@administracion_bp.route("/responsables/<int:usuario_id>/eliminar", methods=["POST"])
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def eliminar_responsable(usuario_id: int):
+    """Elimina responsable; si hay dependencias, lo desactiva."""
+    u = Usuario.query.filter_by(id=usuario_id, rol=RolUsuario.RESPONSABLE).first_or_404()
+    try:
+        emp = Empleado.query.filter_by(usuario_id=u.id).first()
+        if emp is not None:
+            db.session.delete(emp)
+        db.session.delete(u)
+        db.session.commit()
+        flash("Responsable eliminado.", "exito")
+    except IntegrityError:
+        db.session.rollback()
+        u.activo = False
+        emp = Empleado.query.filter_by(usuario_id=u.id).first()
+        if emp is not None:
+            emp.activo = False
+        db.session.commit()
+        flash(
+            "No se pudo borrar por dependencias históricas. Se ha desactivado el responsable.",
+            "aviso",
+        )
+    return redirect(url_for("administracion_bp.listado_responsables"))

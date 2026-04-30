@@ -4,9 +4,17 @@
 <div class="container-fluid px-3 pb-5">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 mb-3">
     <h1 class="h3 text-azul-oscuro mb-0">{{ empleado.nombre_completo }}</h1>
-    {% if current_user.rol != 'empleado' %}
-    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('empleados_bp.editar', empleado_id=empleado.id) }}">Editar ficha</a>
-    {% endif %}
+    <div class="d-flex gap-2">
+      {% if current_user.rol != 'empleado' %}
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('empleados_bp.editar', empleado_id=empleado.id) }}">Editar ficha</a>
+      {% endif %}
+      {% if current_user.rol == 'superadministrador' %}
+      <form method="post" action="{{ url_for('empleados_bp.eliminar', empleado_id=empleado.id) }}" onsubmit="return confirm('¿Borrar empleado?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-danger btn-sm">Borrar</button>
+      </form>
+      {% endif %}
+    </div>
   </div>
   <div class="row g-3">
     <div class="col-12">

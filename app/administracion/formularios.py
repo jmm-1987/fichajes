@@ -66,3 +66,18 @@ class FormularioManagerEmpresa(FlaskForm):
         validators=[DataRequired(), Length(min=8)],
     )
     enviar = SubmitField("Crear manager")
+
+
+class FormularioEditarResponsable(FlaskForm):
+    """Edición de un manager/responsable (usuario de acceso)."""
+
+    correo_electronico = StringField(
+        "Usuario (correo o identificador)",
+        validators=[DataRequired(), Length(min=2, max=255)],
+    )
+    contrasena = PasswordField(
+        "Nueva contraseña (opcional)",
+        validators=[Optional(), Length(min=8)],
+    )
+    activo = BooleanField("Activo", default=True)
+    enviar = SubmitField("Guardar cambios")
