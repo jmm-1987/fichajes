@@ -4,6 +4,12 @@
 <div class="container-fluid px-3 pb-5">
   <h1 class="h3 text-azul-oscuro mt-3 mb-3">Informes de jornada</h1>
   <form class="card border-0 shadow-sm mb-4 p-3" method="get">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <button type="button" class="btn btn-outline-secondary btn-sm js-rango" data-rango="hoy">Hoy</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm js-rango" data-rango="semana">Esta semana</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm js-rango" data-rango="mes">Este mes</button>
+      <span class="small text-muted align-self-center">Atajo rápido de fechas para uso diario.</span>
+    </div>
     <p class="small text-muted mb-2">
       Regla de exportación: si el rango es de un solo día puede incluir varios empleados; si abarca varios días debe seleccionar un único empleado.
     </p>
@@ -67,4 +73,44 @@
   <p class="text-muted">Sin resultados con los filtros actuales.</p>
   {% endfor %}
 </div>
+<script>
+(function () {
+  function ddmmyyyy(d) {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = d.getFullYear();
+    return dd + '/' + mm + '/' + yy;
+  }
+  function lunesDeSemana(d) {
+    const copia = new Date(d);
+    const wd = (copia.getDay() + 6) % 7;
+    copia.setDate(copia.getDate() - wd);
+    return copia;
+  }
+  const desde = document.querySelector('input[name="desde"]');
+  const hasta = document.querySelector('input[name="hasta"]');
+  if (!desde || !hasta) return;
+  document.querySelectorAll('.js-rango').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const hoy = new Date();
+      const tipo = btn.getAttribute('data-rango');
+      if (tipo === 'hoy') {
+        desde.value = ddmmyyyy(hoy);
+        hasta.value = ddmmyyyy(hoy);
+      } else if (tipo === 'semana') {
+        const ini = lunesDeSemana(hoy);
+        const fin = new Date(ini);
+        fin.setDate(fin.getDate() + 6);
+        desde.value = ddmmyyyy(ini);
+        hasta.value = ddmmyyyy(fin);
+      } else if (tipo === 'mes') {
+        const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        desde.value = ddmmyyyy(ini);
+        hasta.value = ddmmyyyy(fin);
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}

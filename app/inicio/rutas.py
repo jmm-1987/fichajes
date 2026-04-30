@@ -47,7 +47,7 @@ def panel():
     datos_admin = None
     datos_empleado = None
     calendario_equipo = None
-    cal_vista = "mes"
+    cal_vista = "semana"
     hoy = inicio_dia_local()
     mes_incluye_hoy = False
     semana_incluye_hoy = False
@@ -66,9 +66,9 @@ def panel():
         equipo_vista_cal = request.args.get("equipo_vista_cal", "calendario")
         if equipo_vista_cal not in ("calendario", "lista"):
             equipo_vista_cal = "calendario"
-        cal_vista = request.args.get("cal_vista", "mes")
+        cal_vista = request.args.get("cal_vista", "semana")
         if cal_vista not in ("mes", "semana"):
-            cal_vista = "mes"
+            cal_vista = "semana"
         if solo_hoy:
             # Modo control diario: centra siempre en la semana de hoy.
             cal_vista = "semana"

@@ -49,6 +49,8 @@ Manual completo: [docs/MANUAL_DESPLIEGUE_VPS_UBUNTU_24.md](docs/MANUAL_DESPLIEGU
 
 Guía recomendada para producción con PostgreSQL: [docs/GUIA_POSTGRESQL.md](docs/GUIA_POSTGRESQL.md).
 
+Manual con foco en hardening y seguridad: [docs/MANUAL_DESPLIEGUE_VPS_UBUNTU_SEGURO.md](docs/MANUAL_DESPLIEGUE_VPS_UBUNTU_SEGURO.md).
+
 Guía **paso a paso con todos los comandos**, usuario **root** y dominio **fichajes.jm2-tech.es**: [docs/DESPLIEGUE_PASO_A_PASO_ROOT_JM2.md](docs/DESPLIEGUE_PASO_A_PASO_ROOT_JM2.md).
 
 ## Estructura principal
