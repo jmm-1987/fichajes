@@ -61,11 +61,7 @@ class Configuracion:
     HABILITAR_BLOQUEO_INTENTOS = _get_bool("HABILITAR_BLOQUEO_INTENTOS", True)
     MAX_INTENTOS_LOGIN = _get_int("MAX_INTENTOS_LOGIN", 5)
     MINUTOS_BLOQUEO_LOGIN = _get_int("MINUTOS_BLOQUEO_LOGIN", 15)
-    HORAS_NOCTURNAS_INICIO = os.getenv("HORAS_NOCTURNAS_INICIO", "22:00")
-    HORAS_NOCTURNAS_FIN = os.getenv("HORAS_NOCTURNAS_FIN", "06:00")
-    FINES_DE_SEMANA_COMO_FESTIVO = _get_bool("FINES_DE_SEMANA_COMO_FESTIVO", False)
-    TOLERANCIA_FICHAJE_MINUTOS = _get_int("TOLERANCIA_FICHAJE_MINUTOS", 5)
-    JORNADA_TEORICA_HORAS_DIA = _get_float("JORNADA_TEORICA_HORAS_DIA", 8.0)
+    # Parámetros laborales por empresa (jornada, nocturnidad, etc.) se gestionan en BD.
     DETRAS_DE_PROXY = _get_bool("DETRAS_DE_PROXY", False)
 
 

@@ -144,7 +144,6 @@ def nuevo():
         try:
             datos = {
                 "correo_electronico": formulario.correo_electronico.data,
-                "codigo_empleado": formulario.codigo_empleado.data,
                 "nombre": formulario.nombre.data,
                 "apellidos": formulario.apellidos.data,
                 "telefono": formulario.telefono.data,
@@ -309,6 +308,7 @@ def editar(empleado_id: int):
     )
 
     if request.method == "GET":
+        formulario.codigo_empleado.data = emp.codigo_empleado
         formulario.saldo_vacaciones.data = emp.saldo_vacaciones
         formulario.responsable_id.data = emp.responsable_usuario_id or 0
         if es_superadministrador() and hasattr(formulario, "empresa_id"):
@@ -317,7 +317,6 @@ def editar(empleado_id: int):
     if formulario.validate_on_submit():
         datos = {
             "correo_electronico": formulario.correo_electronico.data,
-            "codigo_empleado": formulario.codigo_empleado.data,
             "nombre": formulario.nombre.data,
             "apellidos": formulario.apellidos.data,
             "telefono": formulario.telefono.data,

@@ -9,7 +9,11 @@
       <div class="row g-2">
         <div class="col-md-6">{{ formulario.correo_electronico.label(class="form-label") }}{{ formulario.correo_electronico(class="form-control") }}</div>
         <div class="col-md-6">{{ formulario.contrasena.label(class="form-label") }}{{ formulario.contrasena(class="form-control", placeholder='Mín. 8 caracteres si es alta') }}</div>
-        <div class="col-md-6">{{ formulario.codigo_empleado.label(class="form-label") }}{{ formulario.codigo_empleado(class="form-control") }}</div>
+        <div class="col-md-6">
+          {{ formulario.codigo_empleado.label(class="form-label") }}
+          {{ formulario.codigo_empleado(class="form-control", readonly=true, placeholder="Se genera automáticamente") }}
+          <small class="text-muted">Se genera automáticamente (4 caracteres alfanuméricos únicos).</small>
+        </div>
         {% if formulario.empresa_id is defined %}
         <div class="col-md-6">{{ formulario.empresa_id.label(class="form-label") }}{{ formulario.empresa_id(class="form-select") }}</div>
         {% endif %}

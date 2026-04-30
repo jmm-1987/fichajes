@@ -9,8 +9,6 @@ from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from typing import Iterable, List, Optional, Tuple
 
-from flask import current_app
-
 from app.constantes import EstadoRegistroJornada, TipoRegistroJornada
 from app.modelos import ConfiguracionAplicacion, Empleado, Festivo, RegistroJornada
 from app.utilidades.fechas import formatear_fecha
@@ -91,6 +89,31 @@ def parse_hora_config(cadena: str) -> time:
     return time(h, m)
 
 
+def _leer_texto_config_empresa(
+    empresa_id: int | None, clave: str, valor_defecto: str
+) -> str:
+    if empresa_id is not None:
+        cfg_empresa = ConfiguracionAplicacion.query.filter_by(
+            clave=f"empresa:{empresa_id}:{clave}"
+        ).first()
+        if cfg_empresa is not None and cfg_empresa.valor is not None:
+            return str(cfg_empresa.valor).strip()
+    cfg_global = ConfiguracionAplicacion.query.filter_by(clave=clave).first()
+    if cfg_global is not None and cfg_global.valor is not None:
+        return str(cfg_global.valor).strip()
+    return valor_defecto
+
+
+def _leer_float_config_empresa(
+    empresa_id: int | None, clave: str, valor_defecto: float
+) -> float:
+    valor = _leer_texto_config_empresa(empresa_id, clave, str(valor_defecto))
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        return valor_defecto
+
+
 def obtener_ventana_nocturna(empresa_id: int | None) -> Tuple[time, time]:
     """Inicio y fin de franja nocturna, priorizando configuración por empresa."""
     from app.modelos import ConfiguracionHorasNocturnas
@@ -106,8 +129,8 @@ def obtener_ventana_nocturna(empresa_id: int | None) -> Tuple[time, time]:
         if cfg:
             return cfg.hora_inicio, cfg.hora_fin
 
-    ini = current_app.config.get("HORAS_NOCTURNAS_INICIO", "22:00")
-    fin = current_app.config.get("HORAS_NOCTURNAS_FIN", "06:00")
+    ini = _leer_texto_config_empresa(empresa_id, "horas_nocturnas_inicio", "22:00")
+    fin = _leer_texto_config_empresa(empresa_id, "horas_nocturnas_fin", "06:00")
     return parse_hora_config(str(ini)), parse_hora_config(str(fin))
 
 
@@ -169,14 +192,11 @@ def _es_finde_por_config(d: date, empresa_id: int | None) -> bool:
 
 def es_festivo(d: date, empresa_id: int | None) -> bool:
     """
-    True si no es día laboral: festivo en tabla, variable de entorno global,
-    o sábado/domingo según configuración (por empresa o global en BD).
+    True si no es día laboral: festivo en tabla o sábado/domingo
+    según configuración (por empresa o global en BD).
     """
     if _festivo_fecha_en_tabla(d, empresa_id):
         return True
-    if current_app.config.get("FINES_DE_SEMANA_COMO_FESTIVO"):
-        if d.weekday() >= 5:
-            return True
     return _es_finde_por_config(d, empresa_id)
 
 
@@ -189,11 +209,6 @@ def tipo_apariencia_calendario_no_laborable(
     """
     if _festivo_fecha_en_tabla(d, empresa_id):
         return "festivo_bd"
-    if current_app.config.get("FINES_DE_SEMANA_COMO_FESTIVO"):
-        if d.weekday() == 5:
-            return "sabado"
-        if d.weekday() == 6:
-            return "domingo"
     if empresa_id is not None:
         sab, dom = _sabado_domingo_flags_empresa(empresa_id)
         if d.weekday() == 5 and sab:
@@ -248,8 +263,10 @@ def clasificar_dia(
     """
     emp = Empleado.query.get(empleado_id)
     if jornada_teorica_dia is None:
-        jornada_teorica_dia = float(
-            current_app.config.get("JORNADA_TEORICA_HORAS_DIA", 8)
+        jornada_teorica_dia = _leer_float_config_empresa(
+            emp.empresa_id if emp is not None else None,
+            "jornada_teorica_horas_dia",
+            8.0,
         )
     if emp and emp.horas_semanales:
         # Jornada diaria teórica a partir de horas semanales / 5

@@ -3,6 +3,8 @@
 from calendar import monthrange
 from datetime import date
 from decimal import Decimal
+import secrets
+import string
 
 from app.administracion.servicios import obtener_config_empresa
 from app.auditoria.servicios import registrar_auditoria
@@ -10,6 +12,19 @@ from app.constantes import TipoAccionAuditoria
 from app.extensiones import db
 from app.fichajes.calculos import calcular_resumen_periodo
 from app.modelos import Empleado, Usuario
+
+
+def generar_codigo_fichaje_unico(longitud: int = 4) -> str:
+    """Genera un código alfanumérico único global para fichaje."""
+    alfabeto = string.ascii_uppercase + string.digits
+    for _ in range(200):
+        codigo = "".join(secrets.choice(alfabeto) for _ in range(longitud))
+        existe = Empleado.query.filter_by(codigo_empleado=codigo).first()
+        if not existe:
+            return codigo
+    raise ValueError(
+        "No se pudo generar un código de fichaje único. Intente de nuevo."
+    )
 
 
 def tipos_empleado_configurados(empresa_id: int) -> list[str]:
@@ -85,9 +100,11 @@ def crear_empleado_con_usuario(
     if saldo is None:
         saldo = datos.get("vacaciones_anuales", 22)
 
+    codigo_fichaje = generar_codigo_fichaje_unico()
+
     emp_kwargs = dict(
         usuario_id=usuario.id,
-        codigo_empleado=datos["codigo_empleado"].strip(),
+        codigo_empleado=codigo_fichaje,
         nombre=datos["nombre"].strip(),
         apellidos=datos["apellidos"].strip(),
         telefono=(datos.get("telefono") or "").strip() or None,

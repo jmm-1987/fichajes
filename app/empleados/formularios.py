@@ -29,8 +29,8 @@ class FormularioEmpleado(FlaskForm):
         validators=[Optional(), Length(min=8)],
     )
     codigo_empleado = StringField(
-        "Código interno",
-        validators=[DataRequired(), Length(max=64)],
+        "Código de fichaje",
+        validators=[Optional(), Length(max=64)],
     )
     nombre = StringField("Nombre", validators=[DataRequired(), Length(max=120)])
     apellidos = StringField(

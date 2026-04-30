@@ -102,7 +102,7 @@ pip install -r requirements.txt -r requirements-prod.txt
 ### 5.1 Crear usuario y base
 
 ```bash
-sudo -u postgres psql -c "CREATE USER fichajes_app WITH PASSWORD 'CAMBIAR_POR_PASSWORD_LARGA';"
+sudo -u postgres psql -c "CREATE USER fichajes_app WITH PASSWORD 'MR1037xl@mN.';"
 sudo -u postgres psql -c "CREATE DATABASE fichajes OWNER fichajes_app;"
 sudo -u postgres psql -c "ALTER ROLE fichajes_app SET client_encoding TO 'UTF8';"
 sudo -u postgres psql -c "ALTER ROLE fichajes_app SET timezone TO 'UTC';"
