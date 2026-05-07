@@ -2,15 +2,15 @@
 {% block titulo %}Fichaje con código{% endblock %}
 {% block contenido %}
 <div class="mx-auto" style="max-width: 520px;">
-  <h1 class="h3 kiosk-titulo text-azul-oscuro text-center mb-2">Fichaje</h1>
+  <h1 class="h3 kiosk-titulo text-azul-oscuro text-center mb-2">Control registro horarios</h1>
   <p class="text-muted text-center small mb-4">
-    Introduzca su <strong>código de empleado</strong> (o pase el código de barras con el lector).
+   
   </p>
   <form method="post" action="{{ url_for('fichaje_publico_bp.inicio') }}" autocomplete="off" class="card border-0 shadow-sm">
     <div class="card-body p-4">
-      <label for="codigo" class="form-label">Código</label>
+      <label for="codigo" class="form-label">Introduzca su código de empleado</label>
       <input type="text" name="codigo" id="codigo" class="form-control form-control-lg kiosk-input-codigo text-center font-monospace"
-             inputmode="text" autofocus placeholder="Ej. EMP001" required>
+             inputmode="text" autofocus required>
       <button type="submit" class="btn btn-acento btn-lg w-100 mt-4 py-3">Continuar</button>
     </div>
   </form>

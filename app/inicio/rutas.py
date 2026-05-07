@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.constantes import RolUsuario
+from app.empleados.calendario_servicios import aplicar_clasificacion_dia
 from app.inicio.calendario_equipo_servicios import (
     construir_calendario_equipo_mes,
     construir_calendario_equipo_semana,
@@ -19,7 +20,11 @@ from app.inicio.servicios import (
     resumen_panel_administrador,
     resumen_panel_empleado,
 )
-from app.utilidades.predicados import modulo_planificacion_habilitado, roles_dashboard_admin
+from app.utilidades.predicados import (
+    modulo_planificacion_habilitado,
+    puede_gestionar_empleado,
+    roles_dashboard_admin,
+)
 
 inicio_bp = Blueprint(
     "inicio_bp",
@@ -137,3 +142,49 @@ def api_dia_equipo(fecha_iso: str):
         return jsonify({"error": "Fecha no válida."}), 400
     empleados = empleados_alcance_panel()
     return jsonify(detalle_dia_equipo_json(f, empleados))
+
+
+@inicio_bp.route("/panel/marcar-hoy/<int:empleado_id>", methods=["POST"])
+@login_required
+def marcar_hoy_rapido(empleado_id: int):
+    """Acción rápida en panel: clasificar hoy para empleados sin fichaje."""
+    if current_user.rol not in roles_dashboard_admin():
+        return jsonify({"error": "Sin permiso."}), 403
+    if not puede_gestionar_empleado(empleado_id):
+        return jsonify({"error": "Sin permiso sobre ese empleado."}), 403
+
+    tipo = (request.form.get("tipo") or "").strip()
+    if tipo not in {
+        "vacaciones",
+        "libre",
+        "ausencia_justificada",
+        "ausencia_no_justificada",
+    }:
+        return jsonify({"error": "Tipo no permitido."}), 400
+
+    hoy = inicio_dia_local()
+    motivo = (request.form.get("motivo") or "").strip()
+    if tipo in {"libre", "ausencia_justificada", "ausencia_no_justificada"} and not motivo:
+        from flask import flash, redirect, url_for
+
+        flash("Debe indicar un motivo para esa clasificación.", "peligro")
+        destino = request.form.get("next")
+        if destino and destino.startswith("/"):
+            return redirect(destino)
+        return redirect(url_for("inicio_bp.panel", vista_equipo="dia"))
+
+    ok, msg = aplicar_clasificacion_dia(
+        empleado_id,
+        hoy,
+        tipo,
+        motivo if tipo in {"libre", "ausencia_justificada", "ausencia_no_justificada"} else None,
+        current_user.id,
+    )
+
+    from flask import flash, redirect, url_for
+
+    flash(msg, "exito" if ok else "peligro")
+    destino = request.form.get("next")
+    if destino and destino.startswith("/"):
+        return redirect(destino)
+    return redirect(url_for("inicio_bp.panel", vista_equipo="dia"))

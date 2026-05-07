@@ -33,6 +33,10 @@
               {% else %}
               <a href="{{ url_for('administracion_bp.editar_responsable', usuario_id=u.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
               {% endif %}
+              <form method="post" action="{{ url_for('administracion_bp.reset_password_responsable', usuario_id=u.id) }}" class="d-inline" onsubmit="return confirm('¿Resetear contraseña de este responsable?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning">Reset password</button>
+              </form>
               <form method="post" action="{{ url_for('administracion_bp.eliminar_responsable', usuario_id=u.id) }}" class="d-inline" onsubmit="return confirm('¿Eliminar responsable?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-outline-danger">Borrar</button>

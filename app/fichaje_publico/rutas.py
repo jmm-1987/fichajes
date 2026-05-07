@@ -13,6 +13,7 @@ from flask import (
     session,
     url_for,
 )
+from pathlib import Path
 
 from app.constantes import OrigenRegistroJornada, TipoRegistroJornada
 from app.fichaje_publico.servicios import (
@@ -44,6 +45,13 @@ def _kiosk_habilitado() -> bool:
 def _abort_si_deshabilitado():
     if not _kiosk_habilitado():
         abort(404)
+
+
+@fichaje_publico_bp.route("/logo-alditraex.png")
+def logo_alditraex():
+    """Logo corporativo para mostrar en el terminal público."""
+    raiz_proyecto = Path(__file__).resolve().parents[2]
+    return send_from_directory(raiz_proyecto, "logoalditraex.png")
 
 
 @fichaje_publico_bp.route("/manifest.webmanifest")

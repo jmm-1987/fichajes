@@ -14,11 +14,16 @@ from app.fichajes.calculos import calcular_resumen_periodo
 from app.modelos import Empleado, Usuario
 
 
-def generar_codigo_fichaje_unico(longitud: int = 4) -> str:
-    """Genera un código alfanumérico único global para fichaje."""
-    alfabeto = string.ascii_uppercase + string.digits
+def generar_codigo_fichaje_unico(longitud: int = 5) -> str:
+    """Genera un código único global: 1 mayúscula + resto minúsculas."""
+    if longitud < 2:
+        raise ValueError("La longitud mínima del código de fichaje es 2.")
+    primera = string.ascii_uppercase
+    resto = string.ascii_lowercase
     for _ in range(200):
-        codigo = "".join(secrets.choice(alfabeto) for _ in range(longitud))
+        codigo = secrets.choice(primera) + "".join(
+            secrets.choice(resto) for _ in range(longitud - 1)
+        )
         existe = Empleado.query.filter_by(codigo_empleado=codigo).first()
         if not existe:
             return codigo

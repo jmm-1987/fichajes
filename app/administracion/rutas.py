@@ -1,5 +1,8 @@
 """Pantallas de configuración para RRHH y superadmin."""
 
+import secrets
+import string
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
@@ -424,4 +427,37 @@ def eliminar_responsable(usuario_id: int):
             "No se pudo borrar por dependencias históricas. Se ha desactivado el responsable.",
             "aviso",
         )
+    return redirect(url_for("administracion_bp.listado_responsables"))
+
+
+def _generar_contrasena_temporal(longitud: int = 12) -> str:
+    """Contraseña temporal legible y suficientemente robusta."""
+    if longitud < 10:
+        longitud = 10
+    alfabeto = string.ascii_letters + string.digits
+    while True:
+        pwd = "".join(secrets.choice(alfabeto) for _ in range(longitud))
+        if (
+            any(c.islower() for c in pwd)
+            and any(c.isupper() for c in pwd)
+            and any(c.isdigit() for c in pwd)
+        ):
+            return pwd
+
+
+@administracion_bp.route("/responsables/<int:usuario_id>/reset-password", methods=["POST"])
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def reset_password_responsable(usuario_id: int):
+    """Resetea contraseña de responsable y la muestra una sola vez."""
+    u = Usuario.query.filter_by(id=usuario_id, rol=RolUsuario.RESPONSABLE).first_or_404()
+    temporal = _generar_contrasena_temporal()
+    u.establecer_contrasena(temporal)
+    u.intentos_fallidos_login = 0
+    u.bloqueado_hasta = None
+    db.session.commit()
+    flash(
+        f"Contraseña temporal para {u.correo_electronico}: {temporal}",
+        "aviso",
+    )
     return redirect(url_for("administracion_bp.listado_responsables"))

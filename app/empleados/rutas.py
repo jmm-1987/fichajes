@@ -6,6 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
+from app.extensiones import db
 
 from app.constantes import RolUsuario
 from app.empleados.calendario_servicios import (
@@ -390,4 +391,25 @@ def eliminar(empleado_id: int):
             "No se pudo borrar por dependencias históricas. Se ha desactivado el empleado.",
             "aviso",
         )
+    return redirect(url_for("empleados_bp.listado"))
+
+
+@empleados_bp.route("/<int:empleado_id>/toggle-activo", methods=["POST"])
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def toggle_activo(empleado_id: int):
+    """Activa o desactiva empleado (y su usuario asociado)."""
+    emp = Empleado.query.get_or_404(empleado_id)
+    nuevo_estado = not bool(emp.activo)
+    emp.activo = nuevo_estado
+    if emp.usuario is not None:
+        emp.usuario.activo = nuevo_estado
+        if nuevo_estado:
+            emp.usuario.intentos_fallidos_login = 0
+            emp.usuario.bloqueado_hasta = None
+    db.session.commit()
+    flash(
+        "Empleado reactivado." if nuevo_estado else "Empleado desactivado.",
+        "exito",
+    )
     return redirect(url_for("empleados_bp.listado"))

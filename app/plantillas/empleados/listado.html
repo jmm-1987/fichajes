@@ -32,6 +32,12 @@
             <a href="{{ url_for('empleados_bp.detalle', empleado_id=e.id) }}" class="btn btn-sm btn-outline-primary">Ver</a>
             {% if current_user.rol == 'superadministrador' %}
             <a href="{{ url_for('empleados_bp.editar', empleado_id=e.id) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
+            <form method="post" action="{{ url_for('empleados_bp.toggle_activo', empleado_id=e.id) }}" class="d-inline" onsubmit="return confirm('{% if e.activo %}¿Desactivar empleado?{% else %}¿Reactivar empleado?{% endif %}');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm {% if e.activo %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                {% if e.activo %}Desactivar{% else %}Reactivar{% endif %}
+              </button>
+            </form>
             <form method="post" action="{{ url_for('empleados_bp.eliminar', empleado_id=e.id) }}" class="d-inline" onsubmit="return confirm('¿Borrar empleado?');">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-sm btn-outline-danger">Borrar</button>

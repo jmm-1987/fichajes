@@ -101,12 +101,17 @@ def resumen_equipo_para_empleados(
     """
     Lista de empleados con estado actual y horas en el periodo (hoy / semana / mes).
     """
+    from app.empleados.calendario_servicios import resolver_estado_dia_laboral
     from app.fichajes.calculos import calcular_resumen_periodo
 
     inicio, fin = _rango_resumen_equipo(vista)
     resultado = []
+    hoy = inicio_dia_local()
     for emp in empleados:
         res = calcular_resumen_periodo(emp.id, inicio, fin)
+        estado_dia = None
+        if vista == "dia":
+            estado_dia = resolver_estado_dia_laboral(emp.id, hoy).get("estado")
         resultado.append(
             {
                 "id": emp.id,
@@ -114,6 +119,7 @@ def resumen_equipo_para_empleados(
                 "empresa": getattr(emp.empresa, "nombre", None),
                 "dentro": empleado_dentro_jornada(emp.id),
                 "horas": res.get("horas_trabajadas", 0),
+                "estado_dia": estado_dia,
             }
         )
     return resultado
@@ -144,13 +150,25 @@ def ultimo_fichaje_empleado(empleado_id: int) -> RegistroJornada | None:
 
 
 def empleado_dentro_jornada(empleado_id: int) -> bool:
-    """True si el último fichaje relevante sugiere que está en jornada."""
-    ultimo = ultimo_fichaje_empleado(empleado_id)
-    if not ultimo:
+    """True si el estado de hoy indica jornada abierta."""
+    hoy = inicio_dia_local()
+    inicio = datetime.combine(hoy, datetime.min.time()).replace(tzinfo=timezone.utc)
+    fin = inicio + timedelta(days=1)
+    ult_hoy = (
+        RegistroJornada.query.filter(
+            RegistroJornada.empleado_id == empleado_id,
+            RegistroJornada.fecha_hora_servidor >= inicio,
+            RegistroJornada.fecha_hora_servidor < fin,
+            RegistroJornada.estado != EstadoRegistroJornada.ANULADO,
+        )
+        .order_by(RegistroJornada.fecha_hora_servidor.desc())
+        .first()
+    )
+    if not ult_hoy:
         return False
-    if ultimo.tipo_registro in ("entrada", "pausa_fin"):
+    if ult_hoy.tipo_registro in ("entrada", "pausa_fin"):
         return True
-    if ultimo.tipo_registro in ("salida", "pausa_inicio"):
+    if ult_hoy.tipo_registro in ("salida", "pausa_inicio"):
         return False
     return False
 

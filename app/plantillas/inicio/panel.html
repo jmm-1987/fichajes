@@ -186,6 +186,7 @@
               <th>Empresa</th>
               <th>Estado</th>
               <th class="text-end">Horas {% if vista_equipo == 'dia' %}hoy{% elif vista_equipo == 'semana' %}semana{% else %}mes{% endif %}</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -194,7 +195,15 @@
               <td>{{ e.nombre }}</td>
               <td>{{ e.empresa or '—' }}</td>
               <td>
-                {% if e.dentro %}
+                {% if vista_equipo == 'dia' and e.estado_dia == 'vacaciones' %}
+                <span class="badge bg-info text-dark">Vacaciones</span>
+                {% elif vista_equipo == 'dia' and e.estado_dia == 'libre' %}
+                <span class="badge bg-primary">Libre</span>
+                {% elif vista_equipo == 'dia' and e.estado_dia == 'ausencia_justificada' %}
+                <span class="badge bg-warning text-dark">Ausencia justificada</span>
+                {% elif vista_equipo == 'dia' and e.estado_dia == 'ausencia_no_justificada' %}
+                <span class="badge bg-dark">Ausencia no justificada</span>
+                {% elif e.dentro %}
                 <span class="badge bg-success">Trabajando</span>
                 {% elif vista_equipo == 'dia' and e.horas == 0 %}
                 <span class="badge bg-danger">Sin fichaje hoy</span>
@@ -203,15 +212,66 @@
                 {% endif %}
               </td>
               <td class="text-end">{{ e.horas|horas_hhmm }}</td>
+              <td class="text-end">
+                <a href="{{ url_for('empleados_bp.detalle', empleado_id=e.id) }}" class="btn btn-sm btn-outline-secondary">Abrir</a>
+                {% if vista_equipo == 'dia' and not e.dentro and e.horas == 0 and e.estado_dia == 'pendiente' %}
+                <form method="post" action="{{ url_for('inicio_bp.marcar_hoy_rapido', empleado_id=e.id) }}" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="tipo" value="vacaciones">
+                  <input type="hidden" name="motivo" value="">
+                  <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                  <button type="submit" class="btn btn-sm btn-outline-info">Vacaciones</button>
+                </form>
+                <form method="post" action="{{ url_for('inicio_bp.marcar_hoy_rapido', empleado_id=e.id) }}" class="d-inline" onsubmit="return pedirMotivoClasificacion(this, 'libre');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="tipo" value="libre">
+                  <input type="hidden" name="motivo" value="">
+                  <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                  <button type="submit" class="btn btn-sm btn-outline-primary">Libre</button>
+                </form>
+                <form method="post" action="{{ url_for('inicio_bp.marcar_hoy_rapido', empleado_id=e.id) }}" class="d-inline" onsubmit="return pedirMotivoClasificacion(this, 'ausencia justificada');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="tipo" value="ausencia_justificada">
+                  <input type="hidden" name="motivo" value="">
+                  <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                  <button type="submit" class="btn btn-sm btn-outline-warning">Aus. justificada</button>
+                </form>
+                <form method="post" action="{{ url_for('inicio_bp.marcar_hoy_rapido', empleado_id=e.id) }}" class="d-inline" onsubmit="return pedirMotivoClasificacion(this, 'ausencia no justificada');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="tipo" value="ausencia_no_justificada">
+                  <input type="hidden" name="motivo" value="">
+                  <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                  <button type="submit" class="btn btn-sm btn-outline-dark">Aus. no justificada</button>
+                </form>
+                {% endif %}
+              </td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="text-muted small">No hay empleados en tu alcance actual. Revise filtros de rol/empresa.</td></tr>
+            <tr><td colspan="5" class="text-muted small">No hay empleados en tu alcance actual. Revise filtros de rol/empresa.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
   </div>
+  <script>
+    function pedirMotivoClasificacion(formEl, etiquetaTipo) {
+      var motivo = window.prompt("Indique el motivo para marcar como " + etiquetaTipo + ":", "");
+      if (motivo === null) {
+        return false;
+      }
+      motivo = motivo.trim();
+      if (!motivo) {
+        alert("Debe indicar un motivo.");
+        return false;
+      }
+      var input = formEl.querySelector('input[name="motivo"]');
+      if (input) {
+        input.value = motivo;
+      }
+      return true;
+    }
+  </script>
 
   <div class="modal fade" id="modalDiaEquipo" tabindex="-1" aria-labelledby="modalDiaEquipoTitulo" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
