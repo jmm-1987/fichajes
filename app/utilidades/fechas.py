@@ -4,7 +4,7 @@ Formato de fechas en español (dd/mm/aaaa) y zona Europe/Madrid para fechas-hora
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Optional, Union
 from zoneinfo import ZoneInfo
@@ -14,6 +14,21 @@ ZONA_MADRID = ZoneInfo("Europe/Madrid")
 FORMATO_FECHA = "%d/%m/%Y"
 FORMATO_FECHA_HORA = "%d/%m/%Y %H:%M"
 FORMATO_FECHA_HORA_SEG = "%d/%m/%Y %H:%M:%S"
+
+
+def intervalo_utc_dia_en_zona(dia: date, zona: ZoneInfo) -> tuple[datetime, datetime]:
+    """
+    Intervalo [inicio_utc, fin_utc) que corresponde al día calendario `dia`
+    de 00:00 a 24:00 en la zona horaria indicada (p. ej. jornada en España).
+    """
+    inicio_local = datetime.combine(dia, time.min, tzinfo=zona)
+    fin_local = inicio_local + timedelta(days=1)
+    return inicio_local.astimezone(timezone.utc), fin_local.astimezone(timezone.utc)
+
+
+def hoy_calendario_en_zona(zona: ZoneInfo) -> date:
+    """Fecha calendario actual en la zona horaria indicada."""
+    return datetime.now(timezone.utc).astimezone(zona).date()
 
 
 def _a_madrid_naive(dt: datetime) -> datetime:
@@ -57,6 +72,13 @@ def formatear_fecha_hora(
     local = _a_madrid_naive(valor)
     fmt = FORMATO_FECHA_HORA_SEG if con_segundos else FORMATO_FECHA_HORA
     return local.strftime(fmt)
+
+
+def formatear_hora_corta(valor: Optional[datetime]) -> str:
+    """Solo hora local Madrid HH:MM (p. ej. columnas de fichaje del día)."""
+    if valor is None:
+        return "—"
+    return _a_madrid_naive(valor).strftime("%H:%M")
 
 
 def parsear_fecha_es(cadena: Optional[str]) -> Optional[date]:

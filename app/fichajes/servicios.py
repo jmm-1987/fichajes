@@ -1,6 +1,6 @@
 """Registro y corrección de fichajes con auditoría."""
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Optional
 
@@ -23,8 +23,11 @@ from app.modelos import RegistroJornada, SolicitudCorreccion
 
 
 def obtener_registros_dia_ordenados(empleado_id: int, dia: date) -> list[RegistroJornada]:
-    inicio = datetime.combine(dia, time.min, tzinfo=timezone.utc)
-    fin = inicio + timedelta(days=1)
+    from app.fichajes.zona_trabajo import zona_trabajo_para_empleado
+    from app.utilidades.fechas import intervalo_utc_dia_en_zona
+
+    zona = zona_trabajo_para_empleado(empleado_id)
+    inicio, fin = intervalo_utc_dia_en_zona(dia, zona)
     regs = (
         RegistroJornada.query.filter(
             RegistroJornada.empleado_id == empleado_id,

@@ -12,6 +12,8 @@ class Empresa(db.Model):
     nombre = db.Column(db.String(200), nullable=False, unique=True, index=True)
     cif = db.Column(db.String(32), nullable=True, unique=True, index=True)
     activa = db.Column(db.Boolean, nullable=False, default=True)
+    # IANA, p. ej. Europe/Madrid; delimita el "día" de fichajes en hora local de la empresa.
+    zona_horaria = db.Column(db.String(64), nullable=True)
     # Marcas temporales: se usa hora UTC en base de datos,
     # igual que en el resto de modelos, y se presenta en hora de Madrid en las vistas.
     creado_en = db.Column(db.DateTime(timezone=True), nullable=True)

@@ -2,13 +2,17 @@
 
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timedelta
 from typing import Iterator, List, Optional
 
-from app.constantes import EstadoRegistroJornada, TipoClasificacionDiaLaboral
+from app.constantes import TipoClasificacionDiaLaboral
 from app.extensiones import db
-from app.fichajes.calculos import clasificar_dia, calcular_resumen_periodo
-from app.modelos import Empleado, RegistroJornada
+from app.fichajes.calculos import (
+    clasificar_dia,
+    calcular_resumen_periodo,
+    obtener_registros_dia,
+)
+from app.modelos import Empleado
 
 
 def etiqueta_estado_dia_laboral(estado: str) -> str:
@@ -132,19 +136,7 @@ def iterar_filas_detalle(
     while d <= fecha_fin:
         det = clasificar_dia(empleado_id, d)
         det["fecha_dia"] = d
-        regs = (
-            RegistroJornada.query.filter(
-                RegistroJornada.empleado_id == empleado_id,
-                RegistroJornada.fecha_hora_servidor
-                >= datetime.combine(d, time.min, tzinfo=timezone.utc),
-                RegistroJornada.fecha_hora_servidor
-                < datetime.combine(d + timedelta(days=1), time.min, tzinfo=timezone.utc),
-                RegistroJornada.estado != EstadoRegistroJornada.ANULADO,
-            )
-            .order_by(RegistroJornada.fecha_hora_servidor)
-            .all()
-        )
-        det["fichajes"] = regs
+        det["fichajes"] = obtener_registros_dia(empleado_id, d)
         yield det
         d += timedelta(days=1)
 

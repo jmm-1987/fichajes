@@ -29,9 +29,12 @@ def _utc(d: datetime) -> datetime:
 
 
 def obtener_registros_dia(empleado_id: int, dia: date) -> List[RegistroJornada]:
-    """Fichajes del día (no anulados), ordenados."""
-    inicio = datetime.combine(dia, time.min, tzinfo=timezone.utc)
-    fin = inicio + timedelta(days=1)
+    """Fichajes del día calendario en la zona de trabajo del empleado (no anulados), ordenados."""
+    from app.fichajes.zona_trabajo import zona_trabajo_para_empleado
+    from app.utilidades.fechas import intervalo_utc_dia_en_zona
+
+    zona = zona_trabajo_para_empleado(empleado_id)
+    inicio, fin = intervalo_utc_dia_en_zona(dia, zona)
     return (
         RegistroJornada.query.filter(
             RegistroJornada.empleado_id == empleado_id,
@@ -42,6 +45,79 @@ def obtener_registros_dia(empleado_id: int, dia: date) -> List[RegistroJornada]:
         .order_by(RegistroJornada.fecha_hora_servidor)
         .all()
     )
+
+
+def _apertura_pendiente_tras_registros(registros: List[RegistroJornada]) -> bool:
+    """
+    True si tras procesar las marcas en orden queda jornada abierta
+    (entrada o fin de pausa sin salida posterior), alineado con construir_segmentos_trabajo.
+    """
+    apertura: Optional[datetime] = None
+    for r in registros:
+        ts = _utc(r.fecha_hora_servidor)
+        if r.tipo_registro == TipoRegistroJornada.ENTRADA:
+            apertura = ts
+        elif r.tipo_registro == TipoRegistroJornada.PAUSA_INICIO:
+            pass
+        elif r.tipo_registro == TipoRegistroJornada.PAUSA_FIN:
+            pass
+        elif r.tipo_registro == TipoRegistroJornada.SALIDA and apertura is not None:
+            apertura = None
+    return apertura is not None
+
+
+def _marcas_hasta_primera_salida_cierra_turno_anterior(
+    registros: List[RegistroJornada],
+) -> List[RegistroJornada]:
+    """
+    Marcas iniciales del día que cierran un turno empezado el día anterior:
+    pausas y la primera salida. Si el primer fichaje es una nueva entrada, no se fusiona.
+    """
+    if not registros:
+        return []
+    permitidos = frozenset(
+        {
+            TipoRegistroJornada.SALIDA,
+            TipoRegistroJornada.PAUSA_INICIO,
+            TipoRegistroJornada.PAUSA_FIN,
+        }
+    )
+    out: List[RegistroJornada] = []
+    for r in registros:
+        t = r.tipo_registro
+        if t == TipoRegistroJornada.ENTRADA:
+            if not out:
+                return []
+            break
+        if t in permitidos:
+            out.append(r)
+            if t == TipoRegistroJornada.SALIDA:
+                break
+            continue
+        break
+    return out
+
+
+def obtener_registros_dia_para_clasificacion(
+    empleado_id: int, dia: date
+) -> List[RegistroJornada]:
+    """
+    Registros usados para horas e incidencias del día, enlazando turnos que cruzan medianoche.
+
+    - Las horas de un turno que empieza un día y termina al siguiente se imputan al día de la entrada.
+    - Las marcas del día siguiente que solo cierran ese turno no se vuelven a contar al clasificar ese día.
+    """
+    base = list(obtener_registros_dia(empleado_id, dia))
+    dia_ayer = dia - timedelta(days=1)
+    if _apertura_pendiente_tras_registros(obtener_registros_dia(empleado_id, dia_ayer)):
+        prefijo = _marcas_hasta_primera_salida_cierra_turno_anterior(base)
+        base = base[len(prefijo) :]
+    if _apertura_pendiente_tras_registros(base):
+        dia_manana = dia + timedelta(days=1)
+        regs_manana = obtener_registros_dia(empleado_id, dia_manana)
+        sufijo = _marcas_hasta_primera_salida_cierra_turno_anterior(regs_manana)
+        base = base + sufijo
+    return base
 
 
 def construir_segmentos_trabajo(registros: List[RegistroJornada]) -> List[SegmentoTrabajo]:
@@ -275,7 +351,7 @@ def clasificar_dia(
             float(Decimal(emp.horas_semanales)) / 5.0,
         )
 
-    registros = obtener_registros_dia(empleado_id, dia)
+    registros = obtener_registros_dia_para_clasificacion(empleado_id, dia)
     segmentos = construir_segmentos_trabajo(registros)
     empresa_id = emp.empresa_id if emp is not None else None
     noche_ini, noche_fin = obtener_ventana_nocturna(empresa_id)

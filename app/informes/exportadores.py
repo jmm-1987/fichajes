@@ -134,7 +134,10 @@ def exportar_pdf(
         mapa_clasificaciones_manual_rango,
         resolver_estado_dia_laboral,
     )
-    from app.fichajes.calculos import clasificar_dia, obtener_registros_dia
+    from app.fichajes.calculos import (
+        clasificar_dia,
+        obtener_registros_dia_para_clasificacion,
+    )
     from app.informes.servicios import etiqueta_estado_dia_laboral
     from app.utilidades.fechas import formatear_fecha
 
@@ -383,7 +386,7 @@ def exportar_pdf(
         d = fecha_inicio
         while d <= fecha_fin:
             det = clasificar_dia(emp_id, d)
-            regs = obtener_registros_dia(emp_id, d)
+            regs = obtener_registros_dia_para_clasificacion(emp_id, d)
             entrada = next(
                 (r for r in regs if r.tipo_registro == TipoRegistroJornada.ENTRADA),
                 None,

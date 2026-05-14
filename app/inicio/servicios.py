@@ -1,17 +1,26 @@
 """Agregados para widgets del panel de inicio."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import or_
 
-from app.constantes import EstadoRegistroJornada, EstadoSolicitudVacaciones
+from app.constantes import (
+    EstadoRegistroJornada,
+    EstadoSolicitudVacaciones,
+    TipoRegistroJornada,
+)
 from app.extensiones import db
 from app.modelos import Empleado, RegistroJornada, SolicitudCorreccion, SolicitudVacaciones
+from app.utilidades.fechas import (
+    ZONA_MADRID,
+    hoy_calendario_en_zona,
+    intervalo_utc_dia_en_zona,
+)
 
 
 def inicio_dia_local() -> date:
-    """Fecha local simple (servidor); en producción usar zona de empresa."""
-    return datetime.now(timezone.utc).date()
+    """Fecha calendario en Europa/Madrid (referencia para panel y rangos globales)."""
+    return hoy_calendario_en_zona(ZONA_MADRID)
 
 
 def contar_empleados_activos() -> int:
@@ -20,8 +29,7 @@ def contar_empleados_activos() -> int:
 
 def contar_fichajes_hoy() -> int:
     hoy = inicio_dia_local()
-    inicio = datetime.combine(hoy, datetime.min.time()).replace(tzinfo=timezone.utc)
-    fin = inicio + timedelta(days=1)
+    inicio, fin = intervalo_utc_dia_en_zona(hoy, ZONA_MADRID)
     return (
         RegistroJornada.query.filter(
             RegistroJornada.fecha_hora_servidor >= inicio,
@@ -33,12 +41,14 @@ def contar_fichajes_hoy() -> int:
 
 def jornadas_incompletas_hoy_ids() -> list[int]:
     """Empleados activos con entrada hoy pero sin salida (heurística simple)."""
-    hoy = inicio_dia_local()
-    inicio = datetime.combine(hoy, datetime.min.time()).replace(tzinfo=timezone.utc)
-    fin = inicio + timedelta(days=1)
+    from app.fichajes.zona_trabajo import fecha_calendario_hoy_para_empleado, zona_trabajo_para_empleado
+
     empleados = Empleado.query.filter_by(activo=True).all()
     incompletos = []
     for emp in empleados:
+        hoy_e = fecha_calendario_hoy_para_empleado(emp.id)
+        zona = zona_trabajo_para_empleado(emp.id)
+        inicio, fin = intervalo_utc_dia_en_zona(hoy_e, zona)
         regs = (
             RegistroJornada.query.filter(
                 RegistroJornada.empleado_id == emp.id,
@@ -76,6 +86,38 @@ def resumen_panel_administrador() -> dict:
     }
 
 
+def _mapa_primera_entrada_ultima_salida_hoy(
+    empleado_ids: list[int],
+) -> dict[int, tuple[str, str]]:
+    """
+    Primera entrada y última salida del día de trabajo efectivo (incluye cierre de
+    turnos nocturnos como en clasificar_dia), en hora local de la zona del empleado.
+    """
+    from app.fichajes.calculos import obtener_registros_dia_para_clasificacion
+    from app.fichajes.zona_trabajo import fecha_calendario_hoy_para_empleado
+    from app.utilidades.fechas import formatear_hora_corta
+
+    if not empleado_ids:
+        return {}
+    salida: dict[int, tuple[str, str]] = {}
+    for eid in empleado_ids:
+        hoy_e = fecha_calendario_hoy_para_empleado(eid)
+        lista = obtener_registros_dia_para_clasificacion(eid, hoy_e)
+        primera_entrada: datetime | None = None
+        ultima_salida: datetime | None = None
+        for r in lista:
+            if r.tipo_registro == TipoRegistroJornada.ENTRADA:
+                if primera_entrada is None:
+                    primera_entrada = r.fecha_hora_servidor
+            elif r.tipo_registro == TipoRegistroJornada.SALIDA:
+                ultima_salida = r.fecha_hora_servidor
+        salida[eid] = (
+            formatear_hora_corta(primera_entrada),
+            formatear_hora_corta(ultima_salida),
+        )
+    return salida
+
+
 def _rango_resumen_equipo(vista: str) -> tuple[date, date]:
     """Inicio y fin (inclusive) para horas del resumen de equipo."""
     hoy = inicio_dia_local()
@@ -103,15 +145,28 @@ def resumen_equipo_para_empleados(
     """
     from app.empleados.calendario_servicios import resolver_estado_dia_laboral
     from app.fichajes.calculos import calcular_resumen_periodo
+    from app.fichajes.zona_trabajo import fecha_calendario_hoy_para_empleado
 
     inicio, fin = _rango_resumen_equipo(vista)
     resultado = []
-    hoy = inicio_dia_local()
+    ids = [e.id for e in empleados]
+    entradas_salidas = (
+        _mapa_primera_entrada_ultima_salida_hoy(ids) if vista == "dia" else {}
+    )
     for emp in empleados:
-        res = calcular_resumen_periodo(emp.id, inicio, fin)
+        if vista == "dia":
+            h_e = fecha_calendario_hoy_para_empleado(emp.id)
+            res = calcular_resumen_periodo(emp.id, h_e, h_e)
+        else:
+            res = calcular_resumen_periodo(emp.id, inicio, fin)
         estado_dia = None
         if vista == "dia":
-            estado_dia = resolver_estado_dia_laboral(emp.id, hoy).get("estado")
+            estado_dia = resolver_estado_dia_laboral(
+                emp.id, fecha_calendario_hoy_para_empleado(emp.id)
+            ).get("estado")
+        hent, hsal = ("—", "—")
+        if vista == "dia":
+            hent, hsal = entradas_salidas.get(emp.id, ("—", "—"))
         resultado.append(
             {
                 "id": emp.id,
@@ -120,6 +175,8 @@ def resumen_equipo_para_empleados(
                 "dentro": empleado_dentro_jornada(emp.id),
                 "horas": res.get("horas_trabajadas", 0),
                 "estado_dia": estado_dia,
+                "hora_entrada": hent,
+                "hora_salida": hsal,
             }
         )
     return resultado
@@ -151,9 +208,11 @@ def ultimo_fichaje_empleado(empleado_id: int) -> RegistroJornada | None:
 
 def empleado_dentro_jornada(empleado_id: int) -> bool:
     """True si el estado de hoy indica jornada abierta."""
-    hoy = inicio_dia_local()
-    inicio = datetime.combine(hoy, datetime.min.time()).replace(tzinfo=timezone.utc)
-    fin = inicio + timedelta(days=1)
+    from app.fichajes.zona_trabajo import fecha_calendario_hoy_para_empleado, zona_trabajo_para_empleado
+
+    hoy_e = fecha_calendario_hoy_para_empleado(empleado_id)
+    zona = zona_trabajo_para_empleado(empleado_id)
+    inicio, fin = intervalo_utc_dia_en_zona(hoy_e, zona)
     ult_hoy = (
         RegistroJornada.query.filter(
             RegistroJornada.empleado_id == empleado_id,
@@ -176,8 +235,9 @@ def empleado_dentro_jornada(empleado_id: int) -> bool:
 def resumen_panel_empleado(empleado_id: int) -> dict:
     """Widgets del portal empleado."""
     from app.fichajes.calculos import calcular_resumen_periodo
+    from app.fichajes.zona_trabajo import fecha_calendario_hoy_para_empleado
 
-    hoy = inicio_dia_local()
+    hoy = fecha_calendario_hoy_para_empleado(empleado_id)
     inicio_sem = hoy - timedelta(days=hoy.weekday())
     fin_sem = inicio_sem + timedelta(days=6)
     res_hoy = calcular_resumen_periodo(empleado_id, hoy, hoy)
