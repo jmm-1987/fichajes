@@ -346,6 +346,11 @@
   color: #fff;
 }
 
+.cal-dia-en-jornada {
+  background: #20c997;
+  color: #fff;
+}
+
 .cal-dia-pendiente {
   background: #dc3545;
   color: #fff;

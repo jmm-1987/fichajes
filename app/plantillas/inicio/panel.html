@@ -182,15 +182,45 @@
         <table class="table table-sm align-middle mb-0">
           <thead>
             <tr>
-              <th>Empleado</th>
-              <th>Empresa</th>
-              <th>Estado</th>
+              <th scope="col">
+                <a href="{{ panel_url_orden('nombre') }}" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
+                  Empleado
+                  {% if orden_equipo == 'nombre' %}<span class="small opacity-75" aria-hidden="true">{% if dir_equipo == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
+                </a>
+              </th>
+              <th scope="col">
+                <a href="{{ panel_url_orden('empresa') }}" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
+                  Empresa
+                  {% if orden_equipo == 'empresa' %}<span class="small opacity-75" aria-hidden="true">{% if dir_equipo == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
+                </a>
+              </th>
+              <th scope="col">
+                <a href="{{ panel_url_orden('estado') }}" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1">
+                  Estado
+                  {% if orden_equipo == 'estado' %}<span class="small opacity-75" aria-hidden="true">{% if dir_equipo == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
+                </a>
+              </th>
               {% if vista_equipo == 'dia' %}
-              <th class="text-end text-nowrap">Entrada</th>
-              <th class="text-end text-nowrap">Salida</th>
+              <th scope="col" class="text-end text-nowrap">
+                <a href="{{ panel_url_orden('entrada') }}" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1 justify-content-end w-100">
+                  Entrada
+                  {% if orden_equipo == 'entrada' %}<span class="small opacity-75" aria-hidden="true">{% if dir_equipo == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
+                </a>
+              </th>
+              <th scope="col" class="text-end text-nowrap">
+                <a href="{{ panel_url_orden('salida') }}" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1 justify-content-end w-100">
+                  Salida
+                  {% if orden_equipo == 'salida' %}<span class="small opacity-75" aria-hidden="true">{% if dir_equipo == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
+                </a>
+              </th>
               {% endif %}
-              <th class="text-end">Horas {% if vista_equipo == 'dia' %}hoy{% elif vista_equipo == 'semana' %}semana{% else %}mes{% endif %}</th>
-              <th></th>
+              <th scope="col" class="text-end">
+                <a href="{{ panel_url_orden('horas') }}" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1 justify-content-end w-100">
+                  Horas {% if vista_equipo == 'dia' %}hoy{% elif vista_equipo == 'semana' %}semana{% else %}mes{% endif %}
+                  {% if orden_equipo == 'horas' %}<span class="small opacity-75" aria-hidden="true">{% if dir_equipo == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
+                </a>
+              </th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>
@@ -207,10 +237,16 @@
                 <span class="badge bg-warning text-dark">Ausencia justificada</span>
                 {% elif vista_equipo == 'dia' and e.estado_dia == 'ausencia_no_justificada' %}
                 <span class="badge bg-dark">Ausencia no justificada</span>
+                {% elif vista_equipo == 'dia' and e.estado_dia == 'en_jornada' %}
+                <span class="badge bg-success">En jornada</span>
+                {% elif vista_equipo == 'dia' and e.estado_dia == 'trabajado' %}
+                <span class="badge bg-primary">Jornada cerrada</span>
                 {% elif e.dentro %}
-                <span class="badge bg-success">Trabajando</span>
-                {% elif vista_equipo == 'dia' and e.horas == 0 %}
+                <span class="badge bg-success">En jornada</span>
+                {% elif vista_equipo == 'dia' and e.estado_dia == 'pendiente' and e.horas == 0 %}
                 <span class="badge bg-danger">Sin fichaje hoy</span>
+                {% elif vista_equipo == 'dia' and e.horas > 0 %}
+                <span class="badge bg-primary">Jornada cerrada</span>
                 {% else %}
                 <span class="badge bg-secondary">Fuera</span>
                 {% endif %}

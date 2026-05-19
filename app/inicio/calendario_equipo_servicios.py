@@ -63,7 +63,7 @@ def _vinieron_a_trabajar_hoy_o_dia(
         TipoClasificacionDiaLaboral.AUSENCIA_NO_JUSTIFICADA,
     ):
         return False
-    if estado == "trabajado":
+    if estado in ("trabajado", "en_jornada"):
         return True
     if float(r.get("horas_trabajadas") or 0) > 0:
         return True
@@ -216,7 +216,7 @@ def detalle_dia_equipo_json(fecha: date, empleados: list[Empleado]) -> dict[str,
         nombre = emp.nombre_completo
         eid = emp.id
 
-        if estado == "trabajado":
+        if estado in ("trabajado", "en_jornada"):
             trabajaron.append({"id": eid, "nombre": nombre, "horas": horas})
 
         if estado == "vacaciones":

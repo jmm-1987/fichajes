@@ -150,6 +150,21 @@ def construir_segmentos_trabajo(registros: List[RegistroJornada]) -> List[Segmen
     return segmentos
 
 
+def horas_pausa_entre_tramos(segmentos: List[SegmentoTrabajo]) -> float:
+    """
+    Suma los huecos entre tramos de trabajo del mismo día (p. ej. salida 14:00 y
+    nueva entrada 17:00 → 3 h de pausa). No incluye marcas PAUSA_INICIO/FIN dentro
+    de un mismo tramo entrada–salida.
+    """
+    if len(segmentos) < 2:
+        return 0.0
+    ordenados = sorted(segmentos, key=lambda s: s.inicio)
+    total = 0.0
+    for i in range(len(ordenados) - 1):
+        total += duracion_horas(ordenados[i].fin, ordenados[i + 1].inicio)
+    return total
+
+
 def duracion_horas(inicio: datetime, fin: datetime) -> float:
     """Duración en horas (float)."""
     if fin <= inicio:
@@ -358,6 +373,7 @@ def clasificar_dia(
     festivo = es_festivo(dia, empresa_id)
 
     horas_totales = sum(duracion_horas(s.inicio, s.fin) for s in segmentos)
+    horas_pausa = horas_pausa_entre_tramos(segmentos)
     horas_nocturnas = sum(
         horas_en_ventana_nocturna(s.inicio, s.fin, noche_ini, noche_fin)
         for s in segmentos
@@ -380,6 +396,7 @@ def clasificar_dia(
     return {
         "fecha": formatear_fecha(dia),
         "horas_trabajadas": round(horas_totales, 2),
+        "horas_pausa": round(horas_pausa, 2),
         "horas_normales": round(horas_normales, 2),
         "horas_extras": round(horas_extras, 2),
         "horas_nocturnas": round(horas_nocturnas, 2),
@@ -414,6 +431,7 @@ def calcular_resumen_periodo(
     """Suma clasificación día a día en un rango."""
     acum = {
         "horas_trabajadas": 0.0,
+        "horas_pausa": 0.0,
         "horas_normales": 0.0,
         "horas_extras": 0.0,
         "horas_nocturnas": 0.0,
@@ -426,6 +444,7 @@ def calcular_resumen_periodo(
     while d <= fecha_fin:
         part = clasificar_dia(empleado_id, d)
         acum["horas_trabajadas"] += part["horas_trabajadas"]
+        acum["horas_pausa"] += part.get("horas_pausa", 0)
         acum["horas_normales"] += part["horas_normales"]
         acum["horas_extras"] += part["horas_extras"]
         acum["horas_nocturnas"] += part["horas_nocturnas"]

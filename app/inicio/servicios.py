@@ -182,6 +182,80 @@ def resumen_equipo_para_empleados(
     return resultado
 
 
+def _etiqueta_estado_resumen_equipo(fila: dict, vista: str) -> str:
+    """Texto de estado mostrado en la tabla (para ordenar por columna Estado)."""
+    from app.informes.servicios import etiqueta_estado_dia_laboral
+
+    if vista == "dia" and fila.get("estado_dia"):
+        ed = fila["estado_dia"]
+        if ed in (
+            "vacaciones",
+            "libre",
+            "ausencia_justificada",
+            "ausencia_no_justificada",
+            "trabajado",
+            "en_jornada",
+            "pendiente",
+        ):
+            if ed == "pendiente" and fila.get("horas", 0) == 0:
+                return "Sin fichaje hoy"
+            if ed == "trabajado":
+                return "Jornada cerrada"
+            if ed == "en_jornada" or fila.get("dentro"):
+                return "En jornada"
+            return etiqueta_estado_dia_laboral(ed)
+    if fila.get("dentro"):
+        return "En jornada"
+    if vista == "dia" and fila.get("horas", 0) == 0:
+        return "Sin fichaje hoy"
+    if vista == "dia" and fila.get("horas", 0) > 0:
+        return "Jornada cerrada"
+    return "Fuera"
+
+
+def _clave_orden_hora(texto: str) -> tuple[int, str]:
+    """'—' al final; resto por cadena HH:MM."""
+    s = (texto or "").strip()
+    if not s or s == "—":
+        return (1, "")
+    return (0, s)
+
+
+def ordenar_resumen_equipo(
+    filas: list[dict],
+    columna: str,
+    direccion: str = "asc",
+    vista: str = "dia",
+) -> list[dict]:
+    """Ordena filas del listado Empleados del panel (cabeceras clicables)."""
+    columnas = {
+        "nombre",
+        "empresa",
+        "estado",
+        "entrada",
+        "salida",
+        "horas",
+    }
+    if columna not in columnas:
+        columna = "nombre"
+    reverse = direccion == "desc"
+
+    def clave(f: dict):
+        if columna == "nombre":
+            return (f.get("nombre") or "").casefold()
+        if columna == "empresa":
+            return (f.get("empresa") or "").casefold()
+        if columna == "estado":
+            return _etiqueta_estado_resumen_equipo(f, vista).casefold()
+        if columna == "entrada":
+            return _clave_orden_hora(f.get("hora_entrada", "—"))
+        if columna == "salida":
+            return _clave_orden_hora(f.get("hora_salida", "—"))
+        return float(f.get("horas") or 0)
+
+    return sorted(filas, key=clave, reverse=reverse)
+
+
 def resumen_equipo_admin(vista: str = "dia") -> list[dict]:
     """
     Lista de empleados activos (todos) con estado actual y horas.

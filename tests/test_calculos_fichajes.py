@@ -7,7 +7,11 @@ import pytest
 
 from app.extensiones import db
 from app.modelos import Empleado, Empresa, RegistroJornada, Usuario
-from app.fichajes.calculos import clasificar_dia, construir_segmentos_trabajo
+from app.fichajes.calculos import (
+    clasificar_dia,
+    construir_segmentos_trabajo,
+    horas_pausa_entre_tramos,
+)
 from app.constantes import TipoRegistroJornada
 
 
@@ -113,3 +117,38 @@ def test_turno_noche_horas_en_dia_entrada(aplicacion, empleado_con_usuario):
         r_salida = clasificar_dia(empleado_con_usuario, d_salida)
         assert abs(r_entrada["horas_trabajadas"] - 7.0) < 0.05
         assert r_salida["horas_trabajadas"] == 0.0
+
+
+def test_pausa_entre_dos_tramos_mismo_dia(aplicacion, empleado_con_usuario):
+    """9-14 y 17-19 → 3 h de pausa entre tramos."""
+    with aplicacion.app_context():
+        d = date(2026, 4, 1)
+        marcas = [
+            (9, 0, TipoRegistroJornada.ENTRADA),
+            (14, 0, TipoRegistroJornada.SALIDA),
+            (17, 0, TipoRegistroJornada.ENTRADA),
+            (19, 0, TipoRegistroJornada.SALIDA),
+        ]
+        for h, m, tipo in marcas:
+            db.session.add(
+                RegistroJornada(
+                    empleado_id=empleado_con_usuario,
+                    tipo_registro=tipo,
+                    fecha_hora_servidor=datetime.combine(
+                        d, time(h, m), tzinfo=timezone.utc
+                    ),
+                    origen="web_empleado",
+                    estado="valido",
+                )
+            )
+        db.session.commit()
+
+    with aplicacion.app_context():
+        from app.fichajes.calculos import obtener_registros_dia
+
+        regs = obtener_registros_dia(empleado_con_usuario, d)
+        segs = construir_segmentos_trabajo(regs)
+        assert abs(horas_pausa_entre_tramos(segs) - 3.0) < 0.01
+        res = clasificar_dia(empleado_con_usuario, d)
+        assert abs(res["horas_pausa"] - 3.0) < 0.01
+        assert abs(res["horas_trabajadas"] - 7.0) < 0.01

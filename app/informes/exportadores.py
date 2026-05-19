@@ -55,7 +55,7 @@ def exportar_csv(filas: List[dict]) -> bytes:
             "Tipo día",
             "Empleado",
             "Horas trabajadas",
-            "Normales",
+            "Pausa",
             "Extras",
             "Nocturnas",
             "Festivas",
@@ -71,7 +71,7 @@ def exportar_csv(filas: List[dict]) -> bytes:
                 fila.get("resumen_tipos_dia") or "—",
                 emp.nombre_completo,
                 formatear_horas_hhmm(r.get("horas_trabajadas", 0)),
-                formatear_horas_hhmm(r.get("horas_normales", 0)),
+                formatear_horas_hhmm(r.get("horas_pausa", 0)),
                 formatear_horas_hhmm(r.get("horas_extras", 0)),
                 formatear_horas_hhmm(r.get("horas_nocturnas", 0)),
                 formatear_horas_hhmm(r.get("horas_festivas", 0)),
@@ -92,7 +92,7 @@ def exportar_excel(filas: List[dict]) -> bytes:
             "Tipo día",
             "Empleado",
             "Horas trab.",
-            "Normales",
+            "Pausa",
             "Extras",
             "Nocturnas",
             "Festivas",
@@ -106,7 +106,7 @@ def exportar_excel(filas: List[dict]) -> bytes:
                 fila.get("resumen_tipos_dia") or "—",
                 emp.nombre_completo,
                 formatear_horas_hhmm(r.get("horas_trabajadas", 0)),
-                formatear_horas_hhmm(r.get("horas_normales", 0)),
+                formatear_horas_hhmm(r.get("horas_pausa", 0)),
                 formatear_horas_hhmm(r.get("horas_extras", 0)),
                 formatear_horas_hhmm(r.get("horas_nocturnas", 0)),
                 formatear_horas_hhmm(r.get("horas_festivas", 0)),
@@ -377,12 +377,12 @@ def exportar_pdf(
                 Paragraph("Entrada", estilo_th),
                 Paragraph("Salida", estilo_th),
                 Paragraph("Horas<br/>trabajadas", estilo_th),
-                Paragraph("Horas<br/>ordinarias", estilo_th),
+                Paragraph("Pausa", estilo_th),
                 Paragraph("Horas<br/>extraordinarias", estilo_th),
                 Paragraph("Horas<br/>nocturnas", estilo_th),
             ]
         ]
-        sum_trab = sum_norm = sum_extra = sum_noct = 0.0
+        sum_trab = sum_pausa = sum_extra = sum_noct = 0.0
         d = fecha_inicio
         while d <= fecha_fin:
             det = clasificar_dia(emp_id, d)
@@ -411,14 +411,14 @@ def exportar_pdf(
             )
             sin_datos_horas = len(regs) == 0 and estado == "pendiente"
             if sin_datos_horas:
-                c_trab = c_norm = c_extra = c_noct = "sin datos"
+                c_trab = c_pausa = c_extra = c_noct = "sin datos"
             else:
                 c_trab = formatear_horas_hhmm(det.get("horas_trabajadas", 0))
-                c_norm = formatear_horas_hhmm(det.get("horas_normales", 0))
+                c_pausa = formatear_horas_hhmm(det.get("horas_pausa", 0))
                 c_extra = formatear_horas_hhmm(det.get("horas_extras", 0))
                 c_noct = formatear_horas_hhmm(det.get("horas_nocturnas", 0))
                 sum_trab += float(det.get("horas_trabajadas", 0))
-                sum_norm += float(det.get("horas_normales", 0))
+                sum_pausa += float(det.get("horas_pausa", 0))
                 sum_extra += float(det.get("horas_extras", 0))
                 sum_noct += float(det.get("horas_nocturnas", 0))
 
@@ -429,7 +429,7 @@ def exportar_pdf(
                     hora_entrada,
                     hora_salida,
                     c_trab,
-                    c_norm,
+                    c_pausa,
                     c_extra,
                     c_noct,
                 ]
@@ -463,7 +463,7 @@ def exportar_pdf(
                 "",
                 "",
                 formatear_horas_hhmm(sum_trab),
-                formatear_horas_hhmm(sum_norm),
+                formatear_horas_hhmm(sum_pausa),
                 formatear_horas_hhmm(sum_extra),
                 formatear_horas_hhmm(sum_noct),
             ]
@@ -475,7 +475,7 @@ def exportar_pdf(
             ancho * 0.09,
             ancho * 0.09,
             ancho * 0.13,
-            ancho * 0.13,
+            ancho * 0.10,
             ancho * 0.13,
             ancho * 0.13,
         ]
@@ -485,7 +485,7 @@ def exportar_pdf(
                 Paragraph("Tipo<br/>día", estilo_th),
                 Paragraph("Empleado", estilo_th),
                 Paragraph("Horas<br/>trabajadas", estilo_th),
-                Paragraph("Horas<br/>ordinarias", estilo_th),
+                Paragraph("Pausa", estilo_th),
                 Paragraph("Horas<br/>extraordinarias", estilo_th),
                 Paragraph("Horas<br/>nocturnas", estilo_th),
             ]
@@ -499,7 +499,7 @@ def exportar_pdf(
                     Paragraph(_escape_xml(tipo_txt), estilo_td_tipo),
                     emp.nombre_completo[:28],
                     formatear_horas_hhmm(r.get("horas_trabajadas", 0)),
-                    formatear_horas_hhmm(r.get("horas_normales", 0)),
+                    formatear_horas_hhmm(r.get("horas_pausa", 0)),
                     formatear_horas_hhmm(r.get("horas_extras", 0)),
                     formatear_horas_hhmm(r.get("horas_nocturnas", 0)),
                 ]

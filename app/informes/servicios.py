@@ -18,12 +18,13 @@ from app.modelos import Empleado
 def etiqueta_estado_dia_laboral(estado: str) -> str:
     """Una sola etiqueta legible (misma lógica que el calendario)."""
     m = {
-        "trabajado": "Trabajando",
+        "trabajado": "Jornada cerrada",
+        "en_jornada": "En jornada",
         "vacaciones": "Vacaciones",
         TipoClasificacionDiaLaboral.LIBRE: "Libre",
         TipoClasificacionDiaLaboral.AUSENCIA_JUSTIFICADA: "Ausencia justif.",
         TipoClasificacionDiaLaboral.AUSENCIA_NO_JUSTIFICADA: "Ausencia no justif.",
-        "pendiente": "Pendiente",
+        "pendiente": "Sin fichaje",
         "no_laborable": "No laborable",
     }
     return m.get(estado, estado)
@@ -65,12 +66,13 @@ def resumen_tipos_dia_periodo(
         d += timedelta(days=1)
 
     orden = [
-        ("trabajado", "Trabajo"),
+        ("trabajado", "Jornada cerrada"),
+        ("en_jornada", "En jornada"),
         ("vacaciones", "Vacaciones"),
         (TipoClasificacionDiaLaboral.LIBRE, "Libre"),
         (TipoClasificacionDiaLaboral.AUSENCIA_JUSTIFICADA, "Ausencia justif."),
         (TipoClasificacionDiaLaboral.AUSENCIA_NO_JUSTIFICADA, "Ausencia no justif."),
-        ("pendiente", "Pendiente"),
+        ("pendiente", "Sin fichaje"),
         ("no_laborable", "No laborable"),
     ]
     partes: List[str] = []

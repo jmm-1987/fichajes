@@ -83,9 +83,6 @@ def resolver_estado_dia_laboral(
     empresa_id = emp.empresa_id
     laborable = not es_festivo(fecha, empresa_id)
     part = clasificar_dia(empleado_id, fecha)
-    trabajado_auto = laborable and (
-        not part["jornada_incompleta"] and part["horas_trabajadas"] > 0
-    )
     en_vac_sol = laborable and _dia_en_vacaciones_solicitud(empleado_id, fecha)
     cls = manual
     if cls is None:
@@ -111,8 +108,11 @@ def resolver_estado_dia_laboral(
         motivo = cls.motivo
         if tnorm == TipoClasificacionDiaLaboral.VACACIONES:
             fuente_vacaciones = "manual"
-    elif trabajado_auto:
-        estado = "trabajado"
+    elif part["horas_trabajadas"] > 0:
+        if part["jornada_incompleta"]:
+            estado = "en_jornada"
+        else:
+            estado = "trabajado"
     else:
         estado = "pendiente"
 
@@ -147,6 +147,7 @@ def construir_calendario_mes(
     celdas: list[dict[str, Any]] = []
     contadores = {
         "trabajado": 0,
+        "en_jornada": 0,
         "vacaciones": 0,
         "libre": 0,
         "ausencia_justificada": 0,
@@ -173,6 +174,8 @@ def construir_calendario_mes(
                 contadores["ausencia_no_justificada"] += 1
             elif estado == "trabajado":
                 contadores["trabajado"] += 1
+            elif estado == "en_jornada":
+                contadores["en_jornada"] += 1
 
         editable = bool(
             puede_editar

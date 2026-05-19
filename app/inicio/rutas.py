@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.constantes import RolUsuario
@@ -16,6 +16,7 @@ from app.inicio.calendario_equipo_servicios import (
 )
 from app.inicio.servicios import (
     inicio_dia_local,
+    ordenar_resumen_equipo,
     resumen_equipo_para_empleados,
     resumen_panel_administrador,
     resumen_panel_empleado,
@@ -31,6 +32,23 @@ inicio_bp = Blueprint(
     __name__,
     template_folder="../plantillas/inicio",
 )
+
+_COLUMNAS_ORDEN_EQUIPO = frozenset(
+    {"nombre", "empresa", "estado", "entrada", "salida", "horas"}
+)
+
+
+def panel_url_orden(columna: str) -> str:
+    """URL del panel conservando filtros y alternando orden de la columna."""
+    args = request.args.to_dict(flat=True)
+    actual = args.get("orden_equipo", "nombre")
+    direccion = args.get("dir_equipo", "asc")
+    if actual == columna:
+        args["dir_equipo"] = "desc" if direccion == "asc" else "asc"
+    else:
+        args["orden_equipo"] = columna
+        args["dir_equipo"] = "asc"
+    return url_for("inicio_bp.panel", **args)
 
 
 @inicio_bp.route("/")
@@ -68,6 +86,15 @@ def panel():
         if vista_equipo not in ("dia", "semana", "mes"):
             vista_equipo = "dia"
         resumen_equipo = resumen_equipo_para_empleados(empleados_cal, vista_equipo)
+        orden_equipo = request.args.get("orden_equipo", "nombre")
+        if orden_equipo not in _COLUMNAS_ORDEN_EQUIPO:
+            orden_equipo = "nombre"
+        dir_equipo = request.args.get("dir_equipo", "asc")
+        if dir_equipo not in ("asc", "desc"):
+            dir_equipo = "asc"
+        resumen_equipo = ordenar_resumen_equipo(
+            resumen_equipo, orden_equipo, dir_equipo, vista_equipo
+        )
         equipo_vista_cal = request.args.get("equipo_vista_cal", "calendario")
         if equipo_vista_cal not in ("calendario", "lista"):
             equipo_vista_cal = "calendario"
@@ -111,6 +138,13 @@ def panel():
     if emp:
         datos_empleado = resumen_panel_empleado(emp.id)
 
+    orden_equipo_tpl = request.args.get("orden_equipo", "nombre")
+    if orden_equipo_tpl not in _COLUMNAS_ORDEN_EQUIPO:
+        orden_equipo_tpl = "nombre"
+    dir_equipo_tpl = request.args.get("dir_equipo", "asc")
+    if dir_equipo_tpl not in ("asc", "desc"):
+        dir_equipo_tpl = "asc"
+
     return render_template(
         "panel.html",
         datos_admin=datos_admin,
@@ -127,6 +161,9 @@ def panel():
         mes_incluye_hoy=mes_incluye_hoy,
         semana_incluye_hoy=semana_incluye_hoy,
         planificacion_habilitada=modulo_planificacion_habilitado(),
+        orden_equipo=orden_equipo_tpl,
+        dir_equipo=dir_equipo_tpl,
+        panel_url_orden=panel_url_orden,
     )
 
 

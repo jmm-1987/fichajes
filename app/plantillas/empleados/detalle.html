@@ -72,15 +72,17 @@
       </div>
       <p class="small text-muted mb-2">
         Contadores del mes:
-        <strong>Trabajado</strong> {{ calendario_mes.contadores.trabajado }}
+        <strong>Jornada cerrada</strong> {{ calendario_mes.contadores.trabajado }}
+        · <strong>En jornada</strong> {{ calendario_mes.contadores.en_jornada }}
         · <strong>Vacaciones</strong> {{ calendario_mes.contadores.vacaciones }}
         · <strong>Libre</strong> {{ calendario_mes.contadores.libre }}
         · <strong>Aus. justificada</strong> {{ calendario_mes.contadores.ausencia_justificada }}
         · <strong>Aus. no justificada</strong> {{ calendario_mes.contadores.ausencia_no_justificada }}
       </p>
       <div class="d-flex flex-wrap gap-3 small mb-3 text-muted">
-        <span><span class="badge bg-success">&nbsp;</span> Trabajado (fichaje completo)</span>
-        <span><span class="badge bg-danger">&nbsp;</span> Pendiente de clasificar</span>
+        <span><span class="badge bg-success">&nbsp;</span> Jornada cerrada (entrada y salida)</span>
+        <span><span class="badge" style="background:#20c997">&nbsp;</span> En jornada (sin salida)</span>
+        <span><span class="badge bg-danger">&nbsp;</span> Sin fichaje</span>
         <span><span class="badge bg-info text-dark">&nbsp;</span> Vacaciones</span>
         <span><span class="badge bg-primary">&nbsp;</span> Libre</span>
         <span><span class="badge bg-warning text-dark">&nbsp;</span> Ausencia justificada</span>
@@ -110,6 +112,7 @@
           {% endif %}
         {% else %}
         {% if c.estado == 'trabajado' %}{% set cls = 'cal-dia-trabajado' %}{% endif %}
+        {% if c.estado == 'en_jornada' %}{% set cls = 'cal-dia-en-jornada' %}{% endif %}
         {% if c.estado == 'pendiente' %}{% set cls = 'cal-dia-pendiente' %}{% endif %}
         {% if c.estado == 'vacaciones' %}{% set cls = 'cal-dia-vacaciones' %}{% endif %}
         {% if c.estado == 'libre' %}{% set cls = 'cal-dia-libre' %}{% endif %}
