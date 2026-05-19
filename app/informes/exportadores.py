@@ -136,6 +136,7 @@ def exportar_pdf(
     )
     from app.fichajes.calculos import (
         clasificar_dia,
+        formatear_tramos_jornada,
         obtener_registros_dia_para_clasificacion,
     )
     from app.informes.servicios import etiqueta_estado_dia_laboral
@@ -370,12 +371,17 @@ def exportar_pdf(
         emp = filas[0]["empleado"]
         emp_id = emp.id
         manual_map = mapa_clasificaciones_manual_rango([emp_id], fecha_inicio, fecha_fin)
+        estilo_td_tramos = ParagraphStyle(
+            name="TdTramosPdf",
+            parent=estilos["Normal"],
+            fontSize=5.5 if modo_compacto_mensual else 6.5,
+            leading=6.5 if modo_compacto_mensual else 7.5,
+        )
         datos = [
             [
                 Paragraph("Fecha", estilo_th),
                 Paragraph("Tipo<br/>día", estilo_th),
-                Paragraph("Entrada", estilo_th),
-                Paragraph("Salida", estilo_th),
+                Paragraph("Tramos", estilo_th),
                 Paragraph("Horas<br/>trabajadas", estilo_th),
                 Paragraph("Pausa", estilo_th),
                 Paragraph("Horas<br/>extraordinarias", estilo_th),
@@ -387,28 +393,11 @@ def exportar_pdf(
         while d <= fecha_fin:
             det = clasificar_dia(emp_id, d)
             regs = obtener_registros_dia_para_clasificacion(emp_id, d)
-            entrada = next(
-                (r for r in regs if r.tipo_registro == TipoRegistroJornada.ENTRADA),
-                None,
-            )
-            salida = next(
-                (
-                    r
-                    for r in reversed(regs)
-                    if r.tipo_registro == TipoRegistroJornada.SALIDA
-                ),
-                None,
-            )
             cls = manual_map.get((emp_id, d))
             rlab = resolver_estado_dia_laboral(emp_id, d, manual=cls)
             estado = rlab["estado"]
             tipo_txt = etiqueta_estado_dia_laboral(estado)
-            hora_entrada = (
-                _hora_hhmm_madrid(entrada.fecha_hora_servidor) if entrada else "—"
-            )
-            hora_salida = (
-                _hora_hhmm_madrid(salida.fecha_hora_servidor) if salida else "—"
-            )
+            tramos_txt = formatear_tramos_jornada(regs) if regs else "—"
             sin_datos_horas = len(regs) == 0 and estado == "pendiente"
             if sin_datos_horas:
                 c_trab = c_pausa = c_extra = c_noct = "sin datos"
@@ -426,8 +415,7 @@ def exportar_pdf(
                 [
                     formatear_fecha(d),
                     Paragraph(_escape_xml(tipo_txt), estilo_td_tipo),
-                    hora_entrada,
-                    hora_salida,
+                    Paragraph(_escape_xml(tramos_txt), estilo_td_tramos),
                     c_trab,
                     c_pausa,
                     c_extra,
@@ -441,7 +429,6 @@ def exportar_pdf(
                 [
                     "—",
                     Paragraph(_escape_xml("—"), estilo_td_tipo),
-                    "—",
                     "—",
                     "sin datos",
                     "sin datos",
@@ -461,7 +448,6 @@ def exportar_pdf(
                 Paragraph("<b>Total</b>", estilo_total),
                 "",
                 "",
-                "",
                 formatear_horas_hhmm(sum_trab),
                 formatear_horas_hhmm(sum_pausa),
                 formatear_horas_hhmm(sum_extra),
@@ -471,13 +457,12 @@ def exportar_pdf(
         fila_total_pdf = len(datos) - 1
         col_w = [
             ancho * 0.10,
-            ancho * 0.20,
-            ancho * 0.09,
-            ancho * 0.09,
-            ancho * 0.13,
+            ancho * 0.18,
+            ancho * 0.22,
+            ancho * 0.12,
             ancho * 0.10,
             ancho * 0.13,
-            ancho * 0.13,
+            ancho * 0.15,
         ]
     else:
         datos = [

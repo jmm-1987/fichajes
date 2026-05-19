@@ -152,3 +152,33 @@ def test_pausa_entre_dos_tramos_mismo_dia(aplicacion, empleado_con_usuario):
         res = clasificar_dia(empleado_con_usuario, d)
         assert abs(res["horas_pausa"] - 3.0) < 0.01
         assert abs(res["horas_trabajadas"] - 7.0) < 0.01
+
+
+def test_pausa_intrajornada_descuenta_horas(aplicacion, empleado_con_usuario):
+    """Entrada 9, pausa 12-13, salida 18 → 8 h trabajadas y 1 h pausa."""
+    with aplicacion.app_context():
+        d = date(2026, 4, 2)
+        marcas = [
+            (9, 0, TipoRegistroJornada.ENTRADA),
+            (12, 0, TipoRegistroJornada.PAUSA_INICIO),
+            (13, 0, TipoRegistroJornada.PAUSA_FIN),
+            (18, 0, TipoRegistroJornada.SALIDA),
+        ]
+        for h, m, tipo in marcas:
+            db.session.add(
+                RegistroJornada(
+                    empleado_id=empleado_con_usuario,
+                    tipo_registro=tipo,
+                    fecha_hora_servidor=datetime.combine(
+                        d, time(h, m), tzinfo=timezone.utc
+                    ),
+                    origen="web_empleado",
+                    estado="valido",
+                )
+            )
+        db.session.commit()
+
+    with aplicacion.app_context():
+        res = clasificar_dia(empleado_con_usuario, d)
+        assert abs(res["horas_trabajadas"] - 8.0) < 0.01
+        assert abs(res["horas_pausa"] - 1.0) < 0.01

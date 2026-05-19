@@ -122,39 +122,74 @@ def obtener_registros_dia_para_clasificacion(
 
 def construir_segmentos_trabajo(registros: List[RegistroJornada]) -> List[SegmentoTrabajo]:
     """
-    A partir de marcas ordenadas, obtiene intervalos trabajados (descuenta pausas).
+    Intervalos de trabajo efectivo: descuenta pausas PAUSA_INICIO/FIN dentro del tramo
+    y genera un segmento por cada bloque entrada–salida (jornada partida).
     """
     segmentos: List[SegmentoTrabajo] = []
-    apertura: Optional[datetime] = None
-    pausa_inicio: Optional[datetime] = None
+    jornada_abierta = False
+    trabajo_inicio: Optional[datetime] = None
 
     for r in registros:
         ts = _utc(r.fecha_hora_servidor)
         if r.tipo_registro == TipoRegistroJornada.ENTRADA:
-            apertura = ts
-            pausa_inicio = None
+            jornada_abierta = True
+            trabajo_inicio = ts
         elif r.tipo_registro == TipoRegistroJornada.PAUSA_INICIO:
-            pausa_inicio = ts
+            if trabajo_inicio is not None and ts > trabajo_inicio:
+                segmentos.append(SegmentoTrabajo(inicio=trabajo_inicio, fin=ts))
+            trabajo_inicio = None
         elif r.tipo_registro == TipoRegistroJornada.PAUSA_FIN:
-            pausa_inicio = None
-        elif r.tipo_registro == TipoRegistroJornada.SALIDA and apertura is not None:
-            segmentos.append(SegmentoTrabajo(inicio=apertura, fin=ts))
-            apertura = None
-            pausa_inicio = None
+            if jornada_abierta:
+                trabajo_inicio = ts
+        elif r.tipo_registro == TipoRegistroJornada.SALIDA:
+            if trabajo_inicio is not None and ts > trabajo_inicio:
+                segmentos.append(SegmentoTrabajo(inicio=trabajo_inicio, fin=ts))
+            jornada_abierta = False
+            trabajo_inicio = None
 
-    if apertura is not None:
-        # Jornada abierta: hasta "ahora" para estimación del día en curso
+    if jornada_abierta and trabajo_inicio is not None:
         ahora = datetime.now(timezone.utc)
-        segmentos.append(SegmentoTrabajo(inicio=apertura, fin=max(apertura, ahora)))
+        fin = max(trabajo_inicio, ahora)
+        if fin > trabajo_inicio:
+            segmentos.append(SegmentoTrabajo(inicio=trabajo_inicio, fin=fin))
 
     return segmentos
 
 
+def horas_pausa_intrajornada(registros: List[RegistroJornada]) -> float:
+    """Suma intervalos PAUSA_INICIO → PAUSA_FIN del mismo día."""
+    total = 0.0
+    inicio_pausa: Optional[datetime] = None
+    for r in registros:
+        ts = _utc(r.fecha_hora_servidor)
+        if r.tipo_registro == TipoRegistroJornada.PAUSA_INICIO:
+            inicio_pausa = ts
+        elif r.tipo_registro == TipoRegistroJornada.PAUSA_FIN and inicio_pausa is not None:
+            if ts > inicio_pausa:
+                total += duracion_horas(inicio_pausa, ts)
+            inicio_pausa = None
+    return total
+
+
+def formatear_tramos_jornada(registros: List[RegistroJornada]) -> str:
+    """Texto legible de tramos trabajados (p. ej. 09:00-14:00, 17:00-19:00)."""
+    from app.utilidades.fechas import formatear_hora_corta
+
+    segmentos = construir_segmentos_trabajo(registros)
+    if not segmentos:
+        return "—"
+    partes = []
+    for s in sorted(segmentos, key=lambda x: x.inicio):
+        partes.append(
+            f"{formatear_hora_corta(s.inicio)}-{formatear_hora_corta(s.fin)}"
+        )
+    return ", ".join(partes)
+
+
 def horas_pausa_entre_tramos(segmentos: List[SegmentoTrabajo]) -> float:
     """
-    Suma los huecos entre tramos de trabajo del mismo día (p. ej. salida 14:00 y
-    nueva entrada 17:00 → 3 h de pausa). No incluye marcas PAUSA_INICIO/FIN dentro
-    de un mismo tramo entrada–salida.
+    Suma los huecos entre segmentos de trabajo (útil en tests con jornada partida).
+    En producción usar horas_pausa_entre_tramos_por_marcas para no duplicar pausas.
     """
     if len(segmentos) < 2:
         return 0.0
@@ -162,6 +197,23 @@ def horas_pausa_entre_tramos(segmentos: List[SegmentoTrabajo]) -> float:
     total = 0.0
     for i in range(len(ordenados) - 1):
         total += duracion_horas(ordenados[i].fin, ordenados[i + 1].inicio)
+    return total
+
+
+def horas_pausa_entre_tramos_por_marcas(registros: List[RegistroJornada]) -> float:
+    """
+    Huecos entre salida y nueva entrada (jornada partida), sin contar PAUSA_INICIO/FIN.
+    """
+    total = 0.0
+    salida_ts: Optional[datetime] = None
+    for r in registros:
+        ts = _utc(r.fecha_hora_servidor)
+        if r.tipo_registro == TipoRegistroJornada.SALIDA:
+            salida_ts = ts
+        elif r.tipo_registro == TipoRegistroJornada.ENTRADA and salida_ts is not None:
+            if ts > salida_ts:
+                total += duracion_horas(salida_ts, ts)
+            salida_ts = None
     return total
 
 
@@ -373,7 +425,9 @@ def clasificar_dia(
     festivo = es_festivo(dia, empresa_id)
 
     horas_totales = sum(duracion_horas(s.inicio, s.fin) for s in segmentos)
-    horas_pausa = horas_pausa_entre_tramos(segmentos)
+    horas_pausa = horas_pausa_intrajornada(registros) + horas_pausa_entre_tramos_por_marcas(
+        registros
+    )
     horas_nocturnas = sum(
         horas_en_ventana_nocturna(s.inicio, s.fin, noche_ini, noche_fin)
         for s in segmentos

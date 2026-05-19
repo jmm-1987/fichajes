@@ -1,8 +1,8 @@
 """Vistas de fichajes (empleado móvil y administración)."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import or_
 
@@ -28,7 +28,7 @@ from app.fichajes.servicios import (
     resolver_solicitud_correccion,
 )
 from app.modelos import Empleado, RegistroJornada, SolicitudCorreccion
-from app.utilidades.fechas import ZONA_MADRID
+from app.utilidades.fechas import ZONA_MADRID, parsear_fecha_es, periodo_texto
 from app.utilidades.predicados import (
     es_administrador_o_superior,
     obtener_id_empleado_actual,
@@ -169,23 +169,78 @@ def portal_empleado():
 @fichajes_bp.route("/empleado/historial")
 @login_required
 def historial_empleado():
-    """Historial reciente del empleado."""
+    """Historial del empleado con filtro por fechas."""
     emp_id = obtener_id_empleado_actual()
     if not emp_id:
         abort_redirect()
+
+    from app.fichajes.zona_trabajo import zona_trabajo_para_empleado
+    from app.utilidades.fechas import intervalo_utc_dia_en_zona
+
+    hoy = date.today()
+    desde = parsear_fecha_es(request.args.get("desde")) or (hoy - timedelta(days=90))
+    hasta = parsear_fecha_es(request.args.get("hasta")) or hoy
+    if desde > hasta:
+        desde, hasta = hasta, desde
+
+    zona = zona_trabajo_para_empleado(emp_id)
+    inicio_utc, _ = intervalo_utc_dia_en_zona(desde, zona)
+    _, fin_utc = intervalo_utc_dia_en_zona(hasta, zona)
+
     lista = (
         RegistroJornada.query.filter(
             RegistroJornada.empleado_id == emp_id,
             RegistroJornada.estado != EstadoRegistroJornada.ANULADO,
+            RegistroJornada.fecha_hora_servidor >= inicio_utc,
+            RegistroJornada.fecha_hora_servidor < fin_utc,
         )
         .order_by(RegistroJornada.fecha_hora_servidor.desc())
-        .limit(60)
         .all()
     )
     return render_template(
         "historial_empleado.html",
         registros=lista,
+        desde=desde,
+        hasta=hasta,
     )
+
+
+@fichajes_bp.route("/empleado/mi-registro/pdf")
+@login_required
+def exportar_mi_registro_pdf():
+    """PDF del propio trabajador (art. 34.9 ET)."""
+    emp_id = obtener_id_empleado_actual()
+    if not emp_id:
+        abort_redirect()
+
+    from app.fichajes.calculos import calcular_resumen_periodo
+    from app.informes.exportadores import exportar_pdf
+    from app.modelos import Empleado
+
+    hoy = date.today()
+    desde = parsear_fecha_es(request.args.get("desde")) or date(hoy.year, hoy.month, 1)
+    hasta = parsear_fecha_es(request.args.get("hasta")) or hoy
+    if desde > hasta:
+        flash("Rango de fechas no válido.", "peligro")
+        return redirect(url_for("fichajes_bp.historial_empleado"))
+
+    emp = Empleado.query.get_or_404(emp_id)
+    resumen = calcular_resumen_periodo(emp_id, desde, hasta)
+    filas = [{"empleado": emp, "resumen": resumen, "resumen_tipos_dia": "—"}]
+    data = exportar_pdf(
+        filas,
+        "Informe de registro de jornada laboral",
+        periodo_texto(desde, hasta),
+        fecha_emision=hoy,
+        fecha_inicio=desde,
+        fecha_fin=hasta,
+    )
+    resp = make_response(data)
+    resp.headers["Content-Type"] = "application/pdf"
+    resp.headers["Content-Disposition"] = (
+        "attachment; filename=mi_registro_jornada.pdf"
+    )
+    return resp
 
 
 def abort_redirect():

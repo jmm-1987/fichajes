@@ -1,19 +1,44 @@
 {% extends 'base.html' %}
-{% block titulo %}Historial{% endblock %}
+{% block titulo %}Mi historial{% endblock %}
 {% block contenido %}
 <div class="container-fluid px-3 pb-5">
-  <h1 class="h4 text-azul-oscuro mt-3 mb-3">Historial reciente</h1>
+  <h1 class="h4 text-azul-oscuro mt-3 mb-3">Mi historial de fichajes</h1>
+
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-6 col-md-3">
+      <label class="form-label small">Desde</label>
+      <input type="date" name="desde" class="form-control form-control-sm"
+             value="{{ desde.isoformat() }}">
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label small">Hasta</label>
+      <input type="date" name="hasta" class="form-control form-control-sm"
+             value="{{ hasta.isoformat() }}">
+    </div>
+    <div class="col-12 col-md-6 d-flex align-items-end gap-2 flex-wrap">
+      <button type="submit" class="btn btn-acento btn-sm">Filtrar</button>
+      <a class="btn btn-outline-secondary btn-sm"
+         href="{{ url_for('fichajes_bp.exportar_mi_registro_pdf', desde=desde.isoformat(), hasta=hasta.isoformat()) }}">
+        Descargar PDF
+      </a>
+    </div>
+  </form>
+
+  <p class="small text-muted">{{ registros|length }} registro(s) en el periodo.</p>
+
   <div class="list-group shadow-sm">
     {% for r in registros %}
     <div class="list-group-item">
       <div class="d-flex justify-content-between">
-        <strong>{{ r.tipo_registro }}</strong>
+        <strong>{{ r.tipo_registro.replace('_', ' ') }}</strong>
         <span class="small text-muted">{{ r.fecha_hora_servidor|fecha_hora_es }}</span>
       </div>
-      {% if r.texto_ubicacion %}<p class="small mb-0 text-secondary">{{ r.texto_ubicacion }}</p>{% endif %}
+      {% if r.texto_ubicacion %}
+      <p class="small mb-0 text-secondary">{{ r.texto_ubicacion }}</p>
+      {% endif %}
     </div>
     {% else %}
-    <div class="list-group-item">Sin registros</div>
+    <div class="list-group-item">Sin registros en este periodo.</div>
     {% endfor %}
   </div>
 </div>
