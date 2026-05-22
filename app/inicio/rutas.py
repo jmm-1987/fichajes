@@ -41,7 +41,7 @@ _COLUMNAS_ORDEN_EQUIPO = frozenset(
 def panel_url_orden(columna: str) -> str:
     """URL del panel conservando filtros y alternando orden de la columna."""
     args = request.args.to_dict(flat=True)
-    actual = args.get("orden_equipo", "nombre")
+    actual = args.get("orden_equipo", "estado")
     direccion = args.get("dir_equipo", "asc")
     if actual == columna:
         args["dir_equipo"] = "desc" if direccion == "asc" else "asc"
@@ -86,9 +86,9 @@ def panel():
         if vista_equipo not in ("dia", "semana", "mes"):
             vista_equipo = "dia"
         resumen_equipo = resumen_equipo_para_empleados(empleados_cal, vista_equipo)
-        orden_equipo = request.args.get("orden_equipo", "nombre")
+        orden_equipo = request.args.get("orden_equipo", "estado")
         if orden_equipo not in _COLUMNAS_ORDEN_EQUIPO:
-            orden_equipo = "nombre"
+            orden_equipo = "estado"
         dir_equipo = request.args.get("dir_equipo", "asc")
         if dir_equipo not in ("asc", "desc"):
             dir_equipo = "asc"
@@ -138,9 +138,9 @@ def panel():
     if emp:
         datos_empleado = resumen_panel_empleado(emp.id)
 
-    orden_equipo_tpl = request.args.get("orden_equipo", "nombre")
+    orden_equipo_tpl = request.args.get("orden_equipo", "estado")
     if orden_equipo_tpl not in _COLUMNAS_ORDEN_EQUIPO:
-        orden_equipo_tpl = "nombre"
+        orden_equipo_tpl = "estado"
     dir_equipo_tpl = request.args.get("dir_equipo", "asc")
     if dir_equipo_tpl not in ("asc", "desc"):
         dir_equipo_tpl = "asc"

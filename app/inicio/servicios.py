@@ -167,50 +167,84 @@ def resumen_equipo_para_empleados(
         hent, hsal = ("—", "—")
         if vista == "dia":
             hent, hsal = entradas_salidas.get(emp.id, ("—", "—"))
-        resultado.append(
-            {
-                "id": emp.id,
-                "nombre": emp.nombre_completo,
-                "empresa": getattr(emp.empresa, "nombre", None),
-                "dentro": empleado_dentro_jornada(emp.id),
-                "horas": res.get("horas_trabajadas", 0),
-                "estado_dia": estado_dia,
-                "hora_entrada": hent,
-                "hora_salida": hsal,
-            }
+        hoy_emp = (
+            fecha_calendario_hoy_para_empleado(emp.id) if vista == "dia" else None
         )
+        fila = {
+            "id": emp.id,
+            "nombre": emp.nombre_completo,
+            "empresa": getattr(emp.empresa, "nombre", None),
+            "dentro": empleado_dentro_jornada(emp.id) if vista == "dia" else False,
+            "horas": res.get("horas_trabajadas", 0),
+            "estado_dia": estado_dia,
+            "hora_entrada": hent,
+            "hora_salida": hsal,
+            "fecha_dia": hoy_emp,
+            "es_hoy": vista == "dia",
+        }
+        fila["etiqueta_panel"] = etiqueta_estado_panel_equipo(fila, vista)
+        resultado.append(fila)
     return resultado
+
+
+# Umbral (horas) para mostrar «Jornada cerrada» frente a «En pausa» en el panel.
+HORAS_MIN_JORNADA_CERRADA_PANEL = 6.5
+
+_ETIQUETAS_MANUALES_PANEL = {
+    "vacaciones": "Vacaciones",
+    "libre": "Libre",
+    "ausencia_justificada": "Ausencia justificada",
+    "ausencia_no_justificada": "Ausencia no justificada",
+}
+
+
+def etiqueta_estado_panel_equipo(fila: dict, vista: str = "dia") -> str:
+    """
+    Etiqueta del listado Empleados en el panel (vista día).
+
+    - «En pausa» solo si `es_hoy` (día consultado = hoy del empleado): fuera de jornada
+      activa, con fichaje y horas ≤ 6,5 h.
+    - «Jornada cerrada» en días pasados con fichaje (aunque < 6,5 h), o hoy con > 6,5 h.
+    """
+    horas = float(fila.get("horas") or 0)
+    dentro = bool(fila.get("dentro"))
+    ed = fila.get("estado_dia")
+    es_hoy = bool(fila.get("es_hoy"))
+
+    if vista == "dia" and ed in _ETIQUETAS_MANUALES_PANEL:
+        return _ETIQUETAS_MANUALES_PANEL[ed]
+
+    if vista == "dia":
+        if not es_hoy:
+            if ed == "pendiente" and horas == 0:
+                return "Sin fichaje hoy"
+            if horas > 0:
+                return "Jornada cerrada"
+            if ed == "pendiente":
+                return "Sin fichaje hoy"
+            return "Fuera"
+
+        if ed == "en_jornada" or dentro:
+            return "En jornada"
+        if ed == "pendiente" and horas == 0:
+            return "Sin fichaje hoy"
+        if horas > HORAS_MIN_JORNADA_CERRADA_PANEL:
+            return "Jornada cerrada"
+        if horas > 0 and not dentro:
+            return "En pausa"
+        if ed == "pendiente":
+            return "Sin fichaje hoy"
+
+    if dentro:
+        return "En jornada"
+    if vista == "dia" and horas == 0:
+        return "Sin fichaje hoy"
+    return "Fuera"
 
 
 def _etiqueta_estado_resumen_equipo(fila: dict, vista: str) -> str:
     """Texto de estado mostrado en la tabla (para ordenar por columna Estado)."""
-    from app.informes.servicios import etiqueta_estado_dia_laboral
-
-    if vista == "dia" and fila.get("estado_dia"):
-        ed = fila["estado_dia"]
-        if ed in (
-            "vacaciones",
-            "libre",
-            "ausencia_justificada",
-            "ausencia_no_justificada",
-            "trabajado",
-            "en_jornada",
-            "pendiente",
-        ):
-            if ed == "pendiente" and fila.get("horas", 0) == 0:
-                return "Sin fichaje hoy"
-            if ed == "trabajado":
-                return "Jornada cerrada"
-            if ed == "en_jornada" or fila.get("dentro"):
-                return "En jornada"
-            return etiqueta_estado_dia_laboral(ed)
-    if fila.get("dentro"):
-        return "En jornada"
-    if vista == "dia" and fila.get("horas", 0) == 0:
-        return "Sin fichaje hoy"
-    if vista == "dia" and fila.get("horas", 0) > 0:
-        return "Jornada cerrada"
-    return "Fuera"
+    return etiqueta_estado_panel_equipo(fila, vista)
 
 
 def _clave_orden_hora(texto: str) -> tuple[int, str]:
@@ -219,6 +253,18 @@ def _clave_orden_hora(texto: str) -> tuple[int, str]:
     if not s or s == "—":
         return (1, "")
     return (0, s)
+
+
+def _prioridad_estado_resumen_equipo(fila: dict, vista: str) -> int:
+    """
+    Orden en panel: 0 = Sin fichaje hoy, 1 = demás estados, 2 = En jornada (al final).
+    """
+    etiqueta = _etiqueta_estado_resumen_equipo(fila, vista)
+    if etiqueta == "Sin fichaje hoy":
+        return 0
+    if etiqueta == "En jornada":
+        return 2
+    return 1
 
 
 def ordenar_resumen_equipo(
@@ -237,8 +283,9 @@ def ordenar_resumen_equipo(
         "horas",
     }
     if columna not in columnas:
-        columna = "nombre"
+        columna = "estado"
     reverse = direccion == "desc"
+    nombre_sec = lambda f: (f.get("nombre") or "").casefold()
 
     def clave(f: dict):
         if columna == "nombre":
@@ -246,7 +293,11 @@ def ordenar_resumen_equipo(
         if columna == "empresa":
             return (f.get("empresa") or "").casefold()
         if columna == "estado":
-            return _etiqueta_estado_resumen_equipo(f, vista).casefold()
+            return (
+                _prioridad_estado_resumen_equipo(f, vista),
+                _etiqueta_estado_resumen_equipo(f, vista).casefold(),
+                nombre_sec(f),
+            )
         if columna == "entrada":
             return _clave_orden_hora(f.get("hora_entrada", "—"))
         if columna == "salida":

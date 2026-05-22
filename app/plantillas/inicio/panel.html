@@ -229,26 +229,25 @@
               <td>{{ e.nombre }}</td>
               <td>{{ e.empresa or '—' }}</td>
               <td>
-                {% if vista_equipo == 'dia' and e.estado_dia == 'vacaciones' %}
-                <span class="badge bg-info text-dark">Vacaciones</span>
-                {% elif vista_equipo == 'dia' and e.estado_dia == 'libre' %}
-                <span class="badge bg-primary">Libre</span>
-                {% elif vista_equipo == 'dia' and e.estado_dia == 'ausencia_justificada' %}
-                <span class="badge bg-warning text-dark">Ausencia justificada</span>
-                {% elif vista_equipo == 'dia' and e.estado_dia == 'ausencia_no_justificada' %}
-                <span class="badge bg-dark">Ausencia no justificada</span>
-                {% elif vista_equipo == 'dia' and e.estado_dia == 'en_jornada' %}
-                <span class="badge bg-success">En jornada</span>
-                {% elif vista_equipo == 'dia' and e.estado_dia == 'trabajado' %}
-                <span class="badge bg-primary">Jornada cerrada</span>
-                {% elif e.dentro %}
-                <span class="badge bg-success">En jornada</span>
-                {% elif vista_equipo == 'dia' and e.estado_dia == 'pendiente' and e.horas == 0 %}
-                <span class="badge bg-danger">Sin fichaje hoy</span>
-                {% elif vista_equipo == 'dia' and e.horas > 0 %}
-                <span class="badge bg-primary">Jornada cerrada</span>
+                {% set et = e.etiqueta_panel %}
+                {% if et == 'Vacaciones' %}
+                <span class="badge bg-info text-dark">{{ et }}</span>
+                {% elif et == 'Libre' %}
+                <span class="badge bg-primary">{{ et }}</span>
+                {% elif et == 'Ausencia justificada' %}
+                <span class="badge bg-warning text-dark">{{ et }}</span>
+                {% elif et == 'Ausencia no justificada' %}
+                <span class="badge bg-dark">{{ et }}</span>
+                {% elif et == 'En jornada' %}
+                <span class="badge bg-success">{{ et }}</span>
+                {% elif et == 'Jornada cerrada' %}
+                <span class="badge bg-primary">{{ et }}</span>
+                {% elif et == 'En pausa' %}
+                <span class="badge bg-warning text-dark">{{ et }}</span>
+                {% elif et == 'Sin fichaje hoy' %}
+                <span class="badge bg-danger">{{ et }}</span>
                 {% else %}
-                <span class="badge bg-secondary">Fuera</span>
+                <span class="badge bg-secondary">{{ et }}</span>
                 {% endif %}
               </td>
               {% if vista_equipo == 'dia' %}
