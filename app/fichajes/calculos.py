@@ -368,7 +368,12 @@ def tipo_apariencia_calendario_no_laborable(
 
 
 def horas_en_ventana_nocturna(
-    inicio: datetime, fin: datetime, noche_ini: time, noche_fin: time
+    inicio: datetime,
+    fin: datetime,
+    noche_ini: time,
+    noche_fin: time,
+    *,
+    zona_local=None,
 ) -> float:
     """
     Horas del intervalo [inicio, fin] que caen en franja nocturna.
@@ -379,17 +384,24 @@ def horas_en_ventana_nocturna(
     paso = timedelta(minutes=15)
     while t < fin:
         bloque_fin = min(t + paso, fin)
-        if _punto_en_nocturna(t, noche_ini, noche_fin):
+        if _punto_en_nocturna(t, noche_ini, noche_fin, zona_local=zona_local):
             total += duracion_horas(t, bloque_fin)
         t = bloque_fin
     return total
 
 
 def _punto_en_nocturna(
-    momento: datetime, noche_ini: time, noche_fin: time
+    momento: datetime,
+    noche_ini: time,
+    noche_fin: time,
+    *,
+    zona_local=None,
 ) -> bool:
     """Comprueba si un instante cae en horario nocturno."""
-    h = momento.time()
+    if zona_local is not None:
+        h = _utc(momento).astimezone(zona_local).time()
+    else:
+        h = momento.time()
     if noche_ini <= noche_fin:
         return noche_ini <= h < noche_fin
     # Cruce medianoche: ej. 22:00–06:00
@@ -422,6 +434,8 @@ def clasificar_dia(
     segmentos = construir_segmentos_trabajo(registros)
     empresa_id = emp.empresa_id if emp is not None else None
     noche_ini, noche_fin = obtener_ventana_nocturna(empresa_id)
+    from app.fichajes.zona_trabajo import zona_trabajo_para_empresa_id
+    zona_local = zona_trabajo_para_empresa_id(empresa_id)
     festivo = es_festivo(dia, empresa_id)
 
     horas_totales = sum(duracion_horas(s.inicio, s.fin) for s in segmentos)
@@ -429,7 +443,13 @@ def clasificar_dia(
         registros
     )
     horas_nocturnas = sum(
-        horas_en_ventana_nocturna(s.inicio, s.fin, noche_ini, noche_fin)
+        horas_en_ventana_nocturna(
+            s.inicio,
+            s.fin,
+            noche_ini,
+            noche_fin,
+            zona_local=zona_local,
+        )
         for s in segmentos
     )
 

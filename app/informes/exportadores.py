@@ -147,6 +147,12 @@ def exportar_pdf(
         and fecha_inicio is not None
         and fecha_fin is not None
     )
+    es_pdf_resumen_diario = (
+        len(filas) != 1
+        and fecha_inicio is not None
+        and fecha_fin is not None
+        and fecha_inicio == fecha_fin
+    )
     dias_periodo = (
         (fecha_fin - fecha_inicio).days + 1
         if fecha_inicio is not None and fecha_fin is not None
@@ -465,49 +471,119 @@ def exportar_pdf(
             ancho * 0.15,
         ]
     else:
-        datos = [
-            [
-                Paragraph("Tipo<br/>día", estilo_th),
-                Paragraph("Empleado", estilo_th),
-                Paragraph("Horas<br/>trabajadas", estilo_th),
-                Paragraph("Pausa", estilo_th),
-                Paragraph("Horas<br/>extraordinarias", estilo_th),
-                Paragraph("Horas<br/>nocturnas", estilo_th),
+        if es_pdf_resumen_diario:
+            datos = [
+                [
+                    Paragraph("Tipo<br/>día", estilo_th),
+                    Paragraph("Empleado", estilo_th),
+                    Paragraph("Entrada", estilo_th),
+                    Paragraph("Salida", estilo_th),
+                    Paragraph("Horas<br/>trab.", estilo_th),
+                    Paragraph("Pausa", estilo_th),
+                    Paragraph("Horas<br/>extra", estilo_th),
+                    Paragraph("Horas<br/>noct.", estilo_th),
+                ]
             ]
-        ]
-        for fila in filas:
-            emp = fila["empleado"]
-            r = fila["resumen"]
-            tipo_txt = fila.get("resumen_tipos_dia") or "—"
-            datos.append(
+            for fila in filas:
+                emp = fila["empleado"]
+                resumen = fila["resumen"]
+                tipo_txt = fila.get("resumen_tipos_dia") or "—"
+                regs = obtener_registros_dia_para_clasificacion(emp.id, fecha_inicio)
+                reg_entrada = next(
+                    (x for x in regs if x.tipo_registro == TipoRegistroJornada.ENTRADA),
+                    None,
+                )
+                reg_salida = next(
+                    (
+                        x
+                        for x in reversed(regs)
+                        if x.tipo_registro == TipoRegistroJornada.SALIDA
+                    ),
+                    None,
+                )
+                datos.append(
+                    [
+                        Paragraph(_escape_xml(tipo_txt), estilo_td_tipo),
+                        emp.nombre_completo[:34],
+                        _hora_hhmm_madrid(
+                            reg_entrada.fecha_hora_servidor if reg_entrada else None
+                        ),
+                        _hora_hhmm_madrid(
+                            reg_salida.fecha_hora_servidor if reg_salida else None
+                        ),
+                        formatear_horas_hhmm(resumen.get("horas_trabajadas", 0)),
+                        formatear_horas_hhmm(resumen.get("horas_pausa", 0)),
+                        formatear_horas_hhmm(resumen.get("horas_extras", 0)),
+                        formatear_horas_hhmm(resumen.get("horas_nocturnas", 0)),
+                    ]
+                )
+            if len(datos) == 1:
+                datos.append(
+                    [
+                        Paragraph(_escape_xml("—"), estilo_td_tipo),
+                        "Sin datos en el periodo",
+                        "—",
+                        "—",
+                        "00:00",
+                        "00:00",
+                        "00:00",
+                        "00:00",
+                    ]
+                )
+            col_w = [
+                ancho * 0.14,
+                ancho * 0.22,
+                ancho * 0.09,
+                ancho * 0.09,
+                ancho * 0.12,
+                ancho * 0.10,
+                ancho * 0.12,
+                ancho * 0.12,
+            ]
+        else:
+            datos = [
                 [
-                    Paragraph(_escape_xml(tipo_txt), estilo_td_tipo),
-                    emp.nombre_completo[:28],
-                    formatear_horas_hhmm(r.get("horas_trabajadas", 0)),
-                    formatear_horas_hhmm(r.get("horas_pausa", 0)),
-                    formatear_horas_hhmm(r.get("horas_extras", 0)),
-                    formatear_horas_hhmm(r.get("horas_nocturnas", 0)),
+                    Paragraph("Tipo<br/>día", estilo_th),
+                    Paragraph("Empleado", estilo_th),
+                    Paragraph("Horas<br/>trab.", estilo_th),
+                    Paragraph("Pausa", estilo_th),
+                    Paragraph("Horas<br/>extra", estilo_th),
+                    Paragraph("Horas<br/>noct.", estilo_th),
                 ]
-            )
-        if len(datos) == 1:
-            datos.append(
-                [
-                    Paragraph(_escape_xml("—"), estilo_td_tipo),
-                    "Sin datos en el periodo",
-                    "00:00",
-                    "00:00",
-                    "00:00",
-                    "00:00",
-                ]
-            )
-        col_w = [
-            ancho * 0.24,
-            ancho * 0.20,
-            ancho * 0.14,
-            ancho * 0.14,
-            ancho * 0.14,
-            ancho * 0.14,
-        ]
+            ]
+            for fila in filas:
+                emp = fila["empleado"]
+                resumen = fila["resumen"]
+                tipo_txt = fila.get("resumen_tipos_dia") or "—"
+                datos.append(
+                    [
+                        Paragraph(_escape_xml(tipo_txt), estilo_td_tipo),
+                        emp.nombre_completo[:36],
+                        formatear_horas_hhmm(resumen.get("horas_trabajadas", 0)),
+                        formatear_horas_hhmm(resumen.get("horas_pausa", 0)),
+                        formatear_horas_hhmm(resumen.get("horas_extras", 0)),
+                        formatear_horas_hhmm(resumen.get("horas_nocturnas", 0)),
+                    ]
+                )
+            if len(datos) == 1:
+                datos.append(
+                    [
+                        Paragraph(_escape_xml("—"), estilo_td_tipo),
+                        "Sin datos en el periodo",
+                        "00:00",
+                        "00:00",
+                        "00:00",
+                        "00:00",
+                    ]
+                )
+            col_w = [
+                ancho * 0.18,
+                ancho * 0.26,
+                ancho * 0.14,
+                ancho * 0.13,
+                ancho * 0.14,
+                ancho * 0.15,
+            ]
 
     tabla = Table(datos, colWidths=col_w, repeatRows=1)
     estilos_tabla = [

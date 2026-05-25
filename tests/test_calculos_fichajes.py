@@ -182,3 +182,36 @@ def test_pausa_intrajornada_descuenta_horas(aplicacion, empleado_con_usuario):
         res = clasificar_dia(empleado_con_usuario, d)
         assert abs(res["horas_trabajadas"] - 8.0) < 0.01
         assert abs(res["horas_pausa"] - 1.0) < 0.01
+
+
+def test_turno_diurno_no_suma_nocturnas_por_utc(aplicacion, empleado_con_usuario):
+    """06:00-14:00 hora Madrid no debe computar nocturnas."""
+    mad = ZoneInfo("Europe/Madrid")
+    with aplicacion.app_context():
+        d = date(2026, 4, 3)
+        t_in = datetime(2026, 4, 3, 6, 0, tzinfo=mad).astimezone(timezone.utc)
+        t_out = datetime(2026, 4, 3, 14, 0, tzinfo=mad).astimezone(timezone.utc)
+        db.session.add(
+            RegistroJornada(
+                empleado_id=empleado_con_usuario,
+                tipo_registro=TipoRegistroJornada.ENTRADA,
+                fecha_hora_servidor=t_in,
+                origen="web_empleado",
+                estado="valido",
+            )
+        )
+        db.session.add(
+            RegistroJornada(
+                empleado_id=empleado_con_usuario,
+                tipo_registro=TipoRegistroJornada.SALIDA,
+                fecha_hora_servidor=t_out,
+                origen="web_empleado",
+                estado="valido",
+            )
+        )
+        db.session.commit()
+
+    with aplicacion.app_context():
+        res = clasificar_dia(empleado_con_usuario, d)
+        assert abs(res["horas_trabajadas"] - 8.0) < 0.01
+        assert res["horas_nocturnas"] == 0.0
