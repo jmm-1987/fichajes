@@ -289,6 +289,7 @@ def solicitar_correccion():
 def listado_admin():
     """Listado filtrable de fichajes (vista administrativa)."""
     emp_filtro = request.args.get("empleado_id", type=int)
+    fecha_filtro_raw = (request.args.get("fecha") or "").strip()
     consulta = RegistroJornada.query.filter(
         RegistroJornada.estado != EstadoRegistroJornada.ANULADO,
     )
@@ -319,6 +320,18 @@ def listado_admin():
 
     if emp_filtro and puede_gestionar_empleado(emp_filtro):
         consulta = consulta.filter(RegistroJornada.empleado_id == emp_filtro)
+    if fecha_filtro_raw:
+        try:
+            from app.utilidades.fechas import intervalo_utc_dia_en_zona
+
+            f_dia = date.fromisoformat(fecha_filtro_raw[:10])
+            inicio_d, fin_d = intervalo_utc_dia_en_zona(f_dia, ZONA_MADRID)
+            consulta = consulta.filter(
+                RegistroJornada.fecha_hora_servidor >= inicio_d,
+                RegistroJornada.fecha_hora_servidor < fin_d,
+            )
+        except ValueError:
+            fecha_filtro_raw = ""
     registros = consulta.order_by(
         RegistroJornada.fecha_hora_servidor.desc()
     ).limit(200).all()
@@ -348,6 +361,8 @@ def listado_admin():
         "listado_admin.html",
         registros=registros,
         solicitudes=solicitudes,
+        empleado_filtro_id=emp_filtro,
+        fecha_filtro=fecha_filtro_raw or None,
     )
 
 
@@ -356,6 +371,7 @@ def listado_admin():
 @roles_permitidos(
     RolUsuario.SUPERADMINISTRADOR,
     RolUsuario.ADMINISTRADOR_EMPRESA,
+    RolUsuario.RESPONSABLE,
 )
 def corregir_registro(registro_id: int):
     reg = RegistroJornada.query.get_or_404(registro_id)

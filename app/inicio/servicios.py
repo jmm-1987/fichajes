@@ -86,23 +86,22 @@ def resumen_panel_administrador() -> dict:
     }
 
 
-def _mapa_primera_entrada_ultima_salida_hoy(
+def _mapa_primera_entrada_ultima_salida_dia(
     empleado_ids: list[int],
+    dia: date,
 ) -> dict[int, tuple[str, str]]:
     """
     Primera entrada y última salida del día de trabajo efectivo (incluye cierre de
     turnos nocturnos como en clasificar_dia), en hora local de la zona del empleado.
     """
     from app.fichajes.calculos import obtener_registros_dia_para_clasificacion
-    from app.fichajes.zona_trabajo import fecha_calendario_hoy_para_empleado
     from app.utilidades.fechas import formatear_hora_corta
 
     if not empleado_ids:
         return {}
     salida: dict[int, tuple[str, str]] = {}
     for eid in empleado_ids:
-        hoy_e = fecha_calendario_hoy_para_empleado(eid)
-        lista = obtener_registros_dia_para_clasificacion(eid, hoy_e)
+        lista = obtener_registros_dia_para_clasificacion(eid, dia)
         primera_entrada: datetime | None = None
         ultima_salida: datetime | None = None
         for r in lista:
@@ -118,7 +117,9 @@ def _mapa_primera_entrada_ultima_salida_hoy(
     return salida
 
 
-def _rango_resumen_equipo(vista: str) -> tuple[date, date]:
+def _rango_resumen_equipo(
+    vista: str, fecha_dia: date | None = None
+) -> tuple[date, date]:
     """Inicio y fin (inclusive) para horas del resumen de equipo."""
     hoy = inicio_dia_local()
     if vista == "semana":
@@ -132,13 +133,15 @@ def _rango_resumen_equipo(vista: str) -> tuple[date, date]:
             siguiente = inicio.replace(month=inicio.month + 1, day=1)
         fin = siguiente - timedelta(days=1)
     else:
-        inicio = hoy
-        fin = hoy
+        inicio = fecha_dia or hoy
+        fin = inicio
     return inicio, fin
 
 
 def resumen_equipo_para_empleados(
-    empleados: list[Empleado], vista: str = "dia"
+    empleados: list[Empleado],
+    vista: str = "dia",
+    fecha_dia: date | None = None,
 ) -> list[dict]:
     """
     Lista de empleados con estado actual y horas en el periodo (hoy / semana / mes).
@@ -147,40 +150,44 @@ def resumen_equipo_para_empleados(
     from app.fichajes.calculos import calcular_resumen_periodo
     from app.fichajes.zona_trabajo import fecha_calendario_hoy_para_empleado
 
-    inicio, fin = _rango_resumen_equipo(vista)
+    inicio, fin = _rango_resumen_equipo(vista, fecha_dia)
     resultado = []
     ids = [e.id for e in empleados]
+    dia_consulta = fecha_dia or inicio_dia_local()
     entradas_salidas = (
-        _mapa_primera_entrada_ultima_salida_hoy(ids) if vista == "dia" else {}
+        _mapa_primera_entrada_ultima_salida_dia(ids, dia_consulta)
+        if vista == "dia"
+        else {}
     )
     for emp in empleados:
         if vista == "dia":
-            h_e = fecha_calendario_hoy_para_empleado(emp.id)
+            h_e = dia_consulta
             res = calcular_resumen_periodo(emp.id, h_e, h_e)
         else:
             res = calcular_resumen_periodo(emp.id, inicio, fin)
         estado_dia = None
         if vista == "dia":
-            estado_dia = resolver_estado_dia_laboral(
-                emp.id, fecha_calendario_hoy_para_empleado(emp.id)
-            ).get("estado")
+            estado_dia = resolver_estado_dia_laboral(emp.id, dia_consulta).get(
+                "estado"
+            )
         hent, hsal = ("—", "—")
         if vista == "dia":
             hent, hsal = entradas_salidas.get(emp.id, ("—", "—"))
         hoy_emp = (
             fecha_calendario_hoy_para_empleado(emp.id) if vista == "dia" else None
         )
+        es_hoy_emp = vista == "dia" and dia_consulta == hoy_emp
         fila = {
             "id": emp.id,
             "nombre": emp.nombre_completo,
             "empresa": getattr(emp.empresa, "nombre", None),
-            "dentro": empleado_dentro_jornada(emp.id) if vista == "dia" else False,
+            "dentro": empleado_dentro_jornada(emp.id) if es_hoy_emp else False,
             "horas": res.get("horas_trabajadas", 0),
             "estado_dia": estado_dia,
             "hora_entrada": hent,
             "hora_salida": hsal,
-            "fecha_dia": hoy_emp,
-            "es_hoy": vista == "dia",
+            "fecha_dia": dia_consulta if vista == "dia" else None,
+            "es_hoy": es_hoy_emp,
         }
         fila["etiqueta_panel"] = etiqueta_estado_panel_equipo(fila, vista)
         resultado.append(fila)

@@ -38,6 +38,20 @@ _COLUMNAS_ORDEN_EQUIPO = frozenset(
 )
 
 
+def _parse_fecha_equipo(vista_equipo: str) -> date | None:
+    """Fecha consultada en el listado Empleados (vista día)."""
+    if vista_equipo != "dia":
+        return None
+    hoy = inicio_dia_local()
+    raw = request.args.get("fecha")
+    if not raw:
+        return hoy
+    try:
+        return date.fromisoformat(raw[:10])
+    except ValueError:
+        return hoy
+
+
 def panel_url_orden(columna: str) -> str:
     """URL del panel conservando filtros y alternando orden de la columna."""
     args = request.args.to_dict(flat=True)
@@ -49,6 +63,24 @@ def panel_url_orden(columna: str) -> str:
         args["orden_equipo"] = columna
         args["dir_equipo"] = "asc"
     return url_for("inicio_bp.panel", **args)
+
+
+def panel_url_fecha_equipo(fecha: date) -> str:
+    """URL del panel en vista día para una fecha concreta."""
+    return panel_url_fecha_iso(fecha.isoformat())
+
+
+def panel_url_fecha_iso(fecha_iso: str) -> str:
+    """URL del panel en vista día (fecha ISO)."""
+    args = request.args.to_dict(flat=True)
+    args["vista_equipo"] = "dia"
+    args["fecha"] = fecha_iso
+    return url_for("inicio_bp.panel", **args)
+
+
+def panel_url_hoy_empleados() -> str:
+    """Vuelve al día de hoy en el listado Empleados."""
+    return panel_url_fecha_equipo(inicio_dia_local())
 
 
 @inicio_bp.route("/")
@@ -85,7 +117,10 @@ def panel():
         vista_equipo = request.args.get("vista_equipo", "dia")
         if vista_equipo not in ("dia", "semana", "mes"):
             vista_equipo = "dia"
-        resumen_equipo = resumen_equipo_para_empleados(empleados_cal, vista_equipo)
+        fecha_equipo = _parse_fecha_equipo(vista_equipo)
+        resumen_equipo = resumen_equipo_para_empleados(
+            empleados_cal, vista_equipo, fecha_equipo
+        )
         orden_equipo = request.args.get("orden_equipo", "estado")
         if orden_equipo not in _COLUMNAS_ORDEN_EQUIPO:
             orden_equipo = "estado"
@@ -145,6 +180,18 @@ def panel():
     if dir_equipo_tpl not in ("asc", "desc"):
         dir_equipo_tpl = "asc"
 
+    fecha_equipo_tpl = None
+    fecha_equipo_prev_tpl = None
+    fecha_equipo_sig_tpl = None
+    fecha_equipo_es_hoy_tpl = True
+    if es_admin and rol != RolUsuario.EMPLEADO and vista_equipo == "dia":
+        fe = _parse_fecha_equipo("dia")
+        if fe:
+            fecha_equipo_tpl = fe
+            fecha_equipo_prev_tpl = (fe - timedelta(days=1)).isoformat()
+            fecha_equipo_sig_tpl = (fe + timedelta(days=1)).isoformat()
+            fecha_equipo_es_hoy_tpl = fe == hoy
+
     return render_template(
         "panel.html",
         datos_admin=datos_admin,
@@ -164,6 +211,13 @@ def panel():
         orden_equipo=orden_equipo_tpl,
         dir_equipo=dir_equipo_tpl,
         panel_url_orden=panel_url_orden,
+        panel_url_fecha_equipo=panel_url_fecha_equipo,
+        panel_url_fecha_iso=panel_url_fecha_iso,
+        panel_url_hoy_empleados=panel_url_hoy_empleados,
+        fecha_equipo=fecha_equipo_tpl,
+        fecha_equipo_prev=fecha_equipo_prev_tpl,
+        fecha_equipo_sig=fecha_equipo_sig_tpl,
+        fecha_equipo_es_hoy=fecha_equipo_es_hoy_tpl,
     )
 
 
@@ -201,6 +255,14 @@ def marcar_hoy_rapido(empleado_id: int):
 
     hoy = inicio_dia_local()
     motivo = (request.form.get("motivo") or "").strip()
+    fecha_raw = (request.form.get("fecha") or "").strip()
+    if fecha_raw:
+        try:
+            dia = date.fromisoformat(fecha_raw[:10])
+        except ValueError:
+            dia = hoy
+    else:
+        dia = hoy
     if tipo in {"libre", "ausencia_justificada", "ausencia_no_justificada"} and not motivo:
         from flask import flash, redirect, url_for
 
@@ -208,11 +270,11 @@ def marcar_hoy_rapido(empleado_id: int):
         destino = request.form.get("next")
         if destino and destino.startswith("/"):
             return redirect(destino)
-        return redirect(url_for("inicio_bp.panel", vista_equipo="dia"))
+        return redirect(url_for("inicio_bp.panel", vista_equipo="dia", fecha=dia.isoformat()))
 
     ok, msg = aplicar_clasificacion_dia(
         empleado_id,
-        hoy,
+        dia,
         tipo,
         motivo if tipo in {"libre", "ausencia_justificada", "ausencia_no_justificada"} else None,
         current_user.id,
@@ -224,4 +286,4 @@ def marcar_hoy_rapido(empleado_id: int):
     destino = request.form.get("next")
     if destino and destino.startswith("/"):
         return redirect(destino)
-    return redirect(url_for("inicio_bp.panel", vista_equipo="dia"))
+    return redirect(url_for("inicio_bp.panel", vista_equipo="dia", fecha=dia.isoformat()))

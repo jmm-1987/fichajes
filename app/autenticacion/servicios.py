@@ -13,6 +13,15 @@ def ahora_utc():
     return datetime.now(timezone.utc)
 
 
+def _como_utc(dt: datetime | None) -> datetime | None:
+    """Normaliza marcas de tiempo naive (SQLite) a UTC con zona."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def autenticar_usuario(nombre_usuario: str, contrasena: str) -> Usuario | None:
     """
     Valida credenciales y devuelve el usuario o None.
@@ -25,9 +34,11 @@ def autenticar_usuario(nombre_usuario: str, contrasena: str) -> Usuario | None:
 
     cfg = current_app.config
     if cfg.get("HABILITAR_BLOQUEO_INTENTOS"):
-        if usuario.bloqueado_hasta and usuario.bloqueado_hasta > ahora_utc():
+        bloqueado_hasta = _como_utc(usuario.bloqueado_hasta)
+        ahora = ahora_utc()
+        if bloqueado_hasta and bloqueado_hasta > ahora:
             return None
-        if usuario.bloqueado_hasta and usuario.bloqueado_hasta <= ahora_utc():
+        if bloqueado_hasta and bloqueado_hasta <= ahora:
             usuario.bloqueado_hasta = None
             usuario.intentos_fallidos_login = 0
 

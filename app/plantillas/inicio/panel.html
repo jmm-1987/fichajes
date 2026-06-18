@@ -162,18 +162,34 @@
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
           <h2 class="h6 text-azul-oscuro mb-1">Empleados</h2>
-          <p class="small text-muted mb-0">Estado y horas según el periodo seleccionado.</p>
+          <p class="small text-muted mb-0">
+            Estado y horas según el periodo seleccionado.
+            {% if vista_equipo == 'dia' and fecha_equipo %}
+            <span class="text-secondary">
+              · {{ fecha_equipo.strftime('%d/%m/%Y') }}
+              {% if fecha_equipo_es_hoy %}<span class="badge rounded-pill bg-primary ms-1">Hoy</span>{% endif %}
+            </span>
+            {% endif %}
+          </p>
         </div>
         {% if calendario_equipo %}
-        <div class="btn-group btn-group-sm" role="group" aria-label="Periodo horas listado">
-          {% if cal_vista == 'mes' %}
-          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=hoy_iso, vista_equipo='dia', equipo_vista_cal='calendario') }}" class="btn {% if vista_equipo == 'dia' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Hoy</a>
-          <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo='semana', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Semana</a>
-          <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo='mes', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Mes</a>
-          {% else %}
-          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=hoy_iso, vista_equipo='dia', equipo_vista_cal='calendario') }}" class="btn {% if vista_equipo == 'dia' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Hoy</a>
-          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo='semana', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Semana</a>
-          <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo='mes', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Mes</a>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Periodo horas listado">
+            {% if cal_vista == 'mes' %}
+            <a href="{{ panel_url_hoy_empleados() }}" class="btn {% if vista_equipo == 'dia' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Hoy</a>
+            <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo='semana', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Semana</a>
+            <a href="{{ url_for('inicio_bp.panel', cal_vista='mes', mes=calendario_equipo.mes, anio=calendario_equipo.anio, vista_equipo='mes', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Mes</a>
+            {% else %}
+            <a href="{{ panel_url_hoy_empleados() }}" class="btn {% if vista_equipo == 'dia' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Hoy</a>
+            <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo='semana', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'semana' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Semana</a>
+            <a href="{{ url_for('inicio_bp.panel', cal_vista='semana', semana=calendario_equipo.lunes.isoformat(), vista_equipo='mes', equipo_vista_cal=equipo_vista_cal) }}" class="btn {% if vista_equipo == 'mes' %}btn-acento{% else %}btn-outline-secondary{% endif %}">Mes</a>
+            {% endif %}
+          </div>
+          {% if vista_equipo == 'dia' and fecha_equipo_prev and fecha_equipo_sig %}
+          <div class="btn-group btn-group-sm" role="group" aria-label="Navegar día">
+            <a class="btn btn-outline-secondary" href="{{ panel_url_fecha_iso(fecha_equipo_prev) }}">« Día</a>
+            <a class="btn btn-outline-secondary" href="{{ panel_url_fecha_iso(fecha_equipo_sig) }}">Día »</a>
+          </div>
           {% endif %}
         </div>
         {% endif %}
@@ -216,7 +232,7 @@
               {% endif %}
               <th scope="col" class="text-end">
                 <a href="{{ panel_url_orden('horas') }}" class="text-decoration-none text-reset d-inline-flex align-items-center gap-1 justify-content-end w-100">
-                  Horas {% if vista_equipo == 'dia' %}hoy{% elif vista_equipo == 'semana' %}semana{% else %}mes{% endif %}
+                  Horas {% if vista_equipo == 'dia' %}{% if fecha_equipo_es_hoy %}hoy{% else %}día{% endif %}{% elif vista_equipo == 'semana' %}semana{% else %}mes{% endif %}
                   {% if orden_equipo == 'horas' %}<span class="small opacity-75" aria-hidden="true">{% if dir_equipo == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}
                 </a>
               </th>
@@ -258,11 +274,18 @@
               <td class="text-end">
                 <div class="d-inline-flex flex-wrap gap-1 justify-content-end align-items-center">
                 <a href="{{ url_for('empleados_bp.detalle', empleado_id=e.id) }}" class="btn btn-sm btn-outline-secondary">Abrir</a>
+                {% if current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
+                <a href="{% if vista_equipo == 'dia' and fecha_equipo %}{{ url_for('fichajes_bp.listado_admin', empleado_id=e.id, fecha=fecha_equipo.isoformat()) }}{% else %}{{ url_for('fichajes_bp.listado_admin', empleado_id=e.id) }}{% endif %}"
+                   class="btn btn-sm btn-outline-secondary p-1 lh-1" title="Editar horario (corregir fichajes)" aria-label="Editar horario">
+                  <span class="d-inline-block lh-1 fs-5" aria-hidden="true">🕒</span>
+                </a>
+                {% endif %}
                 {% if vista_equipo == 'dia' and not e.dentro and e.horas == 0 and e.estado_dia == 'pendiente' %}
                 <form method="post" action="{{ url_for('inicio_bp.marcar_hoy_rapido', empleado_id=e.id) }}" class="d-inline m-0">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="tipo" value="vacaciones">
                   <input type="hidden" name="motivo" value="">
+                  {% if fecha_equipo %}<input type="hidden" name="fecha" value="{{ fecha_equipo.isoformat() }}">{% endif %}
                   <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                   <button type="submit" class="btn btn-sm btn-outline-info p-1 lh-1" title="Marcar el día de hoy como vacaciones para este empleado" aria-label="Marcar el día de hoy como vacaciones"><span class="d-inline-block lh-1 fs-5" aria-hidden="true">⛱</span></button>
                 </form>
@@ -270,6 +293,7 @@
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="tipo" value="libre">
                   <input type="hidden" name="motivo" value="">
+                  {% if fecha_equipo %}<input type="hidden" name="fecha" value="{{ fecha_equipo.isoformat() }}">{% endif %}
                   <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                   <button type="submit" class="btn btn-sm btn-outline-primary p-1 lh-1" title="Marcar el día de hoy como libre; se pedirá un motivo" aria-label="Marcar el día de hoy como libre"><span class="d-inline-block lh-1 fs-5" aria-hidden="true">🗓️</span></button>
                 </form>
@@ -277,6 +301,7 @@
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="tipo" value="ausencia_justificada">
                   <input type="hidden" name="motivo" value="">
+                  {% if fecha_equipo %}<input type="hidden" name="fecha" value="{{ fecha_equipo.isoformat() }}">{% endif %}
                   <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                   <button type="submit" class="btn btn-sm btn-outline-warning p-1 lh-1" title="Marcar el día de hoy como ausencia justificada; se pedirá un motivo" aria-label="Marcar ausencia justificada"><span class="d-inline-block lh-1 fs-5" aria-hidden="true">📋</span></button>
                 </form>
@@ -284,6 +309,7 @@
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="tipo" value="ausencia_no_justificada">
                   <input type="hidden" name="motivo" value="">
+                  {% if fecha_equipo %}<input type="hidden" name="fecha" value="{{ fecha_equipo.isoformat() }}">{% endif %}
                   <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
                   <button type="submit" class="btn btn-sm btn-outline-dark p-1 lh-1" title="Marcar el día de hoy como ausencia no justificada; se pedirá un motivo" aria-label="Marcar ausencia no justificada"><span class="d-inline-block lh-1 fs-5" aria-hidden="true">⚠️</span></button>
                 </form>

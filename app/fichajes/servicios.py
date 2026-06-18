@@ -182,16 +182,24 @@ def corregir_registro_admin(
         reg.estado = EstadoRegistroJornada.CORREGIDO
     despues = serializar_registro_jornada(reg)
 
+    motivo_limpio = motivo.strip()
+    motivo_audit = (
+        motivo_limpio
+        if motivo_limpio.lower().startswith("edición manual")
+        or motivo_limpio.lower().startswith("edicion manual")
+        else f"Edición manual: {motivo_limpio}"
+    )
+
     registrar_auditoria(
         tipo_entidad="registro_jornada",
         id_entidad=reg.id,
-        accion=TipoAccionAuditoria.ACTUALIZAR,
+        accion=TipoAccionAuditoria.EDICION_MANUAL,
         estado_anterior=antes,
         estado_nuevo=despues,
-        motivo=motivo.strip(),
+        motivo=motivo_audit,
         usuario_actor_id=usuario_actor_id,
         rol_actor=rol_actor,
-        origen_cambio=OrigenRegistroJornada.ADMIN,
+        origen_cambio="edicion_manual",
     )
     db.session.commit()
     return True, None

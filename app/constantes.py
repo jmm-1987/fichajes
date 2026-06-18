@@ -70,6 +70,7 @@ class TipoAccionAuditoria:
 
     CREAR = "crear"
     ACTUALIZAR = "actualizar"
+    EDICION_MANUAL = "edicion_manual"
     ANULAR = "anular"
     APROBAR = "aprobar"
     RECHAZAR = "rechazar"
