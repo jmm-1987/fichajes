@@ -96,13 +96,25 @@ def registrar_marca(
     longitud: Optional[float] = None,
     precision_metros: Optional[float] = None,
     fecha_hora_cliente: Optional[datetime] = None,
+    fecha_hora_servidor: Optional[datetime] = None,
     notas: Optional[str] = None,
     validar_secuencia: bool = True,
 ) -> tuple[RegistroJornada | None, Optional[str]]:
     """
     Crea un fichaje. Devuelve (registro, error).
+    Si `fecha_hora_servidor` se indica, es la hora efectiva del fichaje (p. ej. kiosk manual).
     """
-    dia = ahora_servidor().date()
+    from app.fichajes.zona_trabajo import zona_trabajo_para_empleado
+
+    ahora = ahora_servidor()
+    ts = fecha_hora_servidor or ahora
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    else:
+        ts = ts.astimezone(timezone.utc)
+
+    zona = zona_trabajo_para_empleado(empleado_id)
+    dia = ts.astimezone(zona).date()
     existentes = obtener_registros_dia_ordenados(empleado_id, dia)
     if validar_secuencia:
         ok, msg = validar_nuevo_tipo(existentes, tipo_registro)
@@ -114,11 +126,15 @@ def registrar_marca(
     prec = float(precision_metros) if precision_metros is not None else None
     txt_ub = texto_ubicacion_humano(latitud, longitud, prec)
 
+    cliente = fecha_hora_cliente
+    if fecha_hora_servidor is not None and cliente is None:
+        cliente = ahora
+
     reg = RegistroJornada(
         empleado_id=empleado_id,
         tipo_registro=tipo_registro,
-        fecha_hora_servidor=ahora_servidor(),
-        fecha_hora_cliente=fecha_hora_cliente,
+        fecha_hora_servidor=ts,
+        fecha_hora_cliente=cliente,
         latitud=Decimal(str(latitud)) if latitud is not None else None,
         longitud=Decimal(str(longitud)) if longitud is not None else None,
         precision_metros=Decimal(str(precision_metros))

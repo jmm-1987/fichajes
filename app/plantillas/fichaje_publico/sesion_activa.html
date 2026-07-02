@@ -15,12 +15,18 @@
   </div>
   {% endif %}
 
-  <form method="post" action="{{ url_for('fichaje_publico_bp.fichar_salida') }}" class="d-grid">
-    <button type="submit" class="btn btn-dark btn-lg py-4">Detener · fichar salida</button>
+  <form method="post" action="{{ url_for('.fichar_salida') }}" class="card border-0 shadow-sm kiosk-form-card">
+    <div class="card-body p-4">
+      <p class="small text-muted mb-3 text-center">
+        Ahora: <strong class="font-monospace">{{ hora_actual }}</strong>
+      </p>
+      {% include 'fichaje_publico/_hora_manual_kiosk.html' %}
+      <button type="submit" class="btn btn-dark btn-lg w-100 mt-4 py-3">Detener · fichar salida</button>
+    </div>
   </form>
 
   <p class="text-center small mt-4 mb-0">
-    <a href="{{ url_for('fichaje_publico_bp.inicio') }}" class="text-muted">Volver al inicio</a>
+    <a href="{{ url_for('.inicio') }}" class="text-muted">Volver al inicio</a>
   </p>
 </div>
 {% endblock %}

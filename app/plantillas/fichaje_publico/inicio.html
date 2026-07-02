@@ -6,11 +6,12 @@
   <p class="text-muted text-center small mb-4">
    
   </p>
-  <form method="post" action="{{ url_for('fichaje_publico_bp.inicio') }}" autocomplete="off" class="card border-0 shadow-sm">
+  <form method="post" action="{{ url_for('.inicio') }}" autocomplete="off" class="card border-0 shadow-sm kiosk-form-card">
     <div class="card-body p-4">
       <label for="codigo" class="form-label">Introduzca su código de empleado</label>
       <input type="text" name="codigo" id="codigo" class="form-control form-control-lg kiosk-input-codigo text-center font-monospace"
              inputmode="text" autofocus required>
+      <p class="small text-muted mt-2 mb-0">Si se le pasó la hora, podrá indicarla en el siguiente paso.</p>
       <button type="submit" class="btn btn-acento btn-lg w-100 mt-4 py-3">Continuar</button>
     </div>
   </form>

@@ -3,12 +3,15 @@
 {% block contenido %}
 <div class="container-fluid px-3 pb-5">
   <h1 class="h3 text-azul-oscuro mt-3 mb-3">Registros</h1>
-  {% if empleado_filtro_id or fecha_filtro %}
+  {% if empleado_filtro_id or fecha_filtro or rango_desde %}
   <p class="small text-muted mb-3">
     Filtro activo:
-    {% if empleado_filtro_id %}empleado #{{ empleado_filtro_id }}{% endif %}
-    {% if empleado_filtro_id and fecha_filtro %} · {% endif %}
-    {% if fecha_filtro %}día {{ fecha_filtro }}{% endif %}
+    {% if empleado_filtro %}{{ empleado_filtro.nombre_completo }}{% elif empleado_filtro_id %}empleado #{{ empleado_filtro_id }}{% endif %}
+    {% if rango_desde and rango_hasta %}
+    · últimos {{ ultimos_dias or 5 }} días ({{ rango_desde.strftime('%d/%m/%Y') }} — {{ rango_hasta.strftime('%d/%m/%Y') }})
+    {% elif fecha_filtro %}
+    · día {{ fecha_filtro }}
+    {% endif %}
     · <a href="{{ url_for('fichajes_bp.listado_admin') }}">Quitar filtros</a>
   </p>
   {% endif %}
@@ -41,7 +44,7 @@
           <td>
             <a href="{{ url_for('fichajes_bp.historial_auditoria_registro', registro_id=r.id) }}">Auditoría</a>
             {% if current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
-            · <a href="{{ url_for('fichajes_bp.corregir_registro', registro_id=r.id) }}">Corregir</a>
+            · <a href="{{ url_for('fichajes_bp.corregir_registro', registro_id=r.id, next=volver_a or (request.full_path if request.query_string else request.path)) }}">Corregir</a>
             {% endif %}
           </td>
         </tr>

@@ -29,6 +29,9 @@ class FormularioFicharMovil(FlaskForm):
     enviar_pausa_fin = SubmitField("Fin pausa")
 
 
+MOTIVO_CORRECCION_DEFECTO = "Solicitado por empleado"
+
+
 class FormularioCorreccionAdmin(FlaskForm):
     """Corrección de marca por RRHH."""
 
@@ -50,7 +53,11 @@ class FormularioCorreccionAdmin(FlaskForm):
         validators=[DataRequired()],
     )
     notas = TextAreaField("Notas", validators=[Optional()])
-    motivo = TextAreaField("Motivo del cambio", validators=[DataRequired()])
+    motivo = TextAreaField(
+        "Motivo del cambio",
+        validators=[DataRequired()],
+        default=MOTIVO_CORRECCION_DEFECTO,
+    )
     enviar = SubmitField("Guardar corrección")
 
 

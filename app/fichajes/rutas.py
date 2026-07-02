@@ -14,6 +14,7 @@ from app.constantes import (
 )
 from app.fichajes.calculos import clasificar_dia
 from app.fichajes.formularios import (
+    MOTIVO_CORRECCION_DEFECTO,
     FormularioCorreccionAdmin,
     FormularioFicharMovil,
     FormularioResolverSolicitud,
@@ -44,6 +45,14 @@ def _empresa_id_usuario_actual() -> int | None:
         return uid
     emp = getattr(current_user, "empleado", None)
     return emp.empresa_id if emp else None
+
+
+def _destino_seguro_tras_gestion() -> str:
+    """Vuelve al panel u otra ruta interna indicada en ?next= o formulario."""
+    for fuente in (request.form.get("next"), request.args.get("next")):
+        if fuente and fuente.startswith("/") and not fuente.startswith("//"):
+            return fuente
+    return url_for("inicio_bp.panel")
 
 
 def _ids_empleados_equipo_responsable() -> list[int]:
@@ -290,6 +299,11 @@ def listado_admin():
     """Listado filtrable de fichajes (vista administrativa)."""
     emp_filtro = request.args.get("empleado_id", type=int)
     fecha_filtro_raw = (request.args.get("fecha") or "").strip()
+    ultimos_dias = request.args.get("ultimos_dias", type=int)
+    hasta_raw = (request.args.get("hasta") or "").strip()
+    rango_desde = None
+    rango_hasta = None
+    empleado_filtro = None
     consulta = RegistroJornada.query.filter(
         RegistroJornada.estado != EstadoRegistroJornada.ANULADO,
     )
@@ -320,7 +334,30 @@ def listado_admin():
 
     if emp_filtro and puede_gestionar_empleado(emp_filtro):
         consulta = consulta.filter(RegistroJornada.empleado_id == emp_filtro)
-    if fecha_filtro_raw:
+        empleado_filtro = Empleado.query.get(emp_filtro)
+    if ultimos_dias and ultimos_dias > 0:
+        from app.inicio.servicios import inicio_dia_local
+        from app.utilidades.fechas import intervalo_utc_dia_en_zona
+
+        ref_raw = hasta_raw or fecha_filtro_raw
+        if ref_raw:
+            try:
+                hasta_d = date.fromisoformat(ref_raw[:10])
+            except ValueError:
+                hasta_d = inicio_dia_local()
+        else:
+            hasta_d = inicio_dia_local()
+        desde_d = hasta_d - timedelta(days=ultimos_dias - 1)
+        inicio_r, _ = intervalo_utc_dia_en_zona(desde_d, ZONA_MADRID)
+        _, fin_r = intervalo_utc_dia_en_zona(hasta_d, ZONA_MADRID)
+        consulta = consulta.filter(
+            RegistroJornada.fecha_hora_servidor >= inicio_r,
+            RegistroJornada.fecha_hora_servidor < fin_r,
+        )
+        rango_desde = desde_d
+        rango_hasta = hasta_d
+        fecha_filtro_raw = ""
+    elif fecha_filtro_raw:
         try:
             from app.utilidades.fechas import intervalo_utc_dia_en_zona
 
@@ -362,7 +399,12 @@ def listado_admin():
         registros=registros,
         solicitudes=solicitudes,
         empleado_filtro_id=emp_filtro,
+        empleado_filtro=empleado_filtro,
         fecha_filtro=fecha_filtro_raw or None,
+        rango_desde=rango_desde,
+        rango_hasta=rango_hasta,
+        ultimos_dias=ultimos_dias if ultimos_dias and ultimos_dias > 0 else None,
+        volver_a=request.args.get("next"),
     )
 
 
@@ -375,11 +417,14 @@ def listado_admin():
 )
 def corregir_registro(registro_id: int):
     reg = RegistroJornada.query.get_or_404(registro_id)
+    destino = _destino_seguro_tras_gestion()
     if not puede_gestionar_empleado(reg.empleado_id):
         flash("Sin permiso para este empleado.", "peligro")
-        return redirect(url_for("fichajes_bp.listado_admin"))
+        return redirect(destino)
 
     formulario = FormularioCorreccionAdmin(obj=reg)
+    if request.method == "GET" and not (formulario.motivo.data or "").strip():
+        formulario.motivo.data = MOTIVO_CORRECCION_DEFECTO
 
     if formulario.validate_on_submit():
         nueva = formulario.fecha_hora_servidor.data
@@ -400,13 +445,14 @@ def corregir_registro(registro_id: int):
         )
         if ok:
             flash("Corrección guardada con auditoría.", "exito")
-            return redirect(url_for("fichajes_bp.listado_admin"))
+            return redirect(destino)
         flash(msg or "Error", "peligro")
 
     return render_template(
         "corregir_registro.html",
         formulario=formulario,
         registro=reg,
+        volver_a=destino,
     )
 
 

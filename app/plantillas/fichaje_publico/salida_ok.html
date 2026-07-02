@@ -5,6 +5,11 @@
   <div class="alert alert-success border-0 shadow-sm">
     <p class="h5 mb-1">Fichaje realizado correctamente</p>
     <p class="mb-0 small">Salida · <strong>{{ empleado.nombre_completo }}</strong></p>
+    {% if hora_registrada %}
+    <p class="mb-0 small mt-1">Hora registrada: <strong class="font-monospace">{{ hora_registrada }}</strong>
+      {% if hora_manual %}<span class="text-muted">(indicada manualmente)</span>{% endif %}
+    </p>
+    {% endif %}
   </div>
   <p class="small text-muted mt-3 mb-0">Volviendo al inicio en <span id="kiosk-cuenta-atras">5</span> s…</p>
 </div>
@@ -19,7 +24,7 @@
     if (el) el.textContent = String(n);
     if (n <= 0) {
       clearInterval(t);
-      window.location.href = {{ url_for('fichaje_publico_bp.inicio') | tojson }};
+      window.location.href = {{ url_for('.inicio') | tojson }};
     }
   }, 1000);
 })();

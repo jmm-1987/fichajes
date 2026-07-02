@@ -6,11 +6,15 @@
   <form method="post" class="card border-0 shadow-sm">
     <div class="card-body">
       {{ formulario.hidden_tag() }}
+      <input type="hidden" name="next" value="{{ volver_a }}">
       <div class="mb-3">{{ formulario.fecha_hora_servidor.label(class="form-label") }}{{ formulario.fecha_hora_servidor(class="form-control") }}</div>
       <div class="mb-3">{{ formulario.tipo_registro.label(class="form-label") }}{{ formulario.tipo_registro(class="form-select") }}</div>
       <div class="mb-3">{{ formulario.notas.label(class="form-label") }}{{ formulario.notas(class="form-control") }}</div>
       <div class="mb-3">{{ formulario.motivo.label(class="form-label") }}{{ formulario.motivo(class="form-control", rows=3) }}</div>
-      {{ formulario.enviar(class="btn btn-acento") }}
+      <div class="d-flex flex-wrap gap-2">
+        {{ formulario.enviar(class="btn btn-acento") }}
+        <a href="{{ volver_a }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
     </div>
   </form>
 </div>

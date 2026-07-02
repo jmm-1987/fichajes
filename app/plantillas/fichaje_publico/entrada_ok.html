@@ -5,6 +5,11 @@
   <div class="alert alert-success border-0 shadow-sm">
     <p class="h5 mb-1">Fichaje realizado correctamente</p>
     <p class="mb-0 small">Entrada · <strong>{{ empleado.nombre_completo }}</strong></p>
+    {% if hora_registrada %}
+    <p class="mb-0 small mt-1">Hora registrada: <strong class="font-monospace">{{ hora_registrada }}</strong>
+      {% if hora_manual %}<span class="text-muted">(indicada manualmente)</span>{% endif %}
+    </p>
+    {% endif %}
   </div>
   {% if contador.mostrar_contador and contador.contador_inicio_iso %}
   <div id="bloque-contador-jornada" class="card border-0 shadow-sm mt-3 border-start border-4 border-success"
@@ -29,7 +34,7 @@
     if (el) el.textContent = String(n);
     if (n <= 0) {
       clearInterval(t);
-      window.location.href = {{ url_for('fichaje_publico_bp.inicio') | tojson }};
+      window.location.href = {{ url_for('.inicio') | tojson }};
     }
   }, 1000);
 })();

@@ -275,7 +275,7 @@
                 <div class="d-inline-flex flex-wrap gap-1 justify-content-end align-items-center">
                 <a href="{{ url_for('empleados_bp.detalle', empleado_id=e.id) }}" class="btn btn-sm btn-outline-secondary">Abrir</a>
                 {% if current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
-                <a href="{% if vista_equipo == 'dia' and fecha_equipo %}{{ url_for('fichajes_bp.listado_admin', empleado_id=e.id, fecha=fecha_equipo.isoformat()) }}{% else %}{{ url_for('fichajes_bp.listado_admin', empleado_id=e.id) }}{% endif %}"
+                <a href="{% if vista_equipo == 'dia' and fecha_equipo %}{{ url_for('fichajes_bp.listado_admin', empleado_id=e.id, ultimos_dias=5, hasta=fecha_equipo.isoformat(), next=panel_url_fecha_iso(fecha_equipo.isoformat())) }}{% else %}{{ url_for('fichajes_bp.listado_admin', empleado_id=e.id, ultimos_dias=5, next=panel_url_hoy_empleados()) }}{% endif %}"
                    class="btn btn-sm btn-outline-secondary p-1 lh-1" title="Editar horario (corregir fichajes)" aria-label="Editar horario">
                   <span class="d-inline-block lh-1 fs-5" aria-hidden="true">🕒</span>
                 </a>

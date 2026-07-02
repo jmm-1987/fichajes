@@ -1,0 +1,22 @@
+{% extends 'fichaje_publico/kiosk_base.html' %}
+{% block titulo %}Fichar entrada{% endblock %}
+{% block contenido %}
+<div class="mx-auto" style="max-width: 520px;">
+  <h1 class="h4 kiosk-titulo text-azul-oscuro text-center mb-2">{{ empleado.nombre_completo }}</h1>
+  <p class="text-center text-muted small mb-4">Confirme la entrada</p>
+
+  <form method="post" action="{{ url_for('.confirmar_entrada') }}" class="card border-0 shadow-sm kiosk-form-card">
+    <div class="card-body p-4">
+      <p class="small text-muted mb-3 text-center">
+        Ahora: <strong class="font-monospace">{{ hora_actual }}</strong>
+      </p>
+      {% include 'fichaje_publico/_hora_manual_kiosk.html' %}
+      <button type="submit" class="btn btn-acento btn-lg w-100 mt-4 py-3">Fichar entrada</button>
+    </div>
+  </form>
+
+  <p class="text-center small mt-4 mb-0">
+    <a href="{{ url_for('.inicio') }}" class="text-muted">Cancelar</a>
+  </p>
+</div>
+{% endblock %}
