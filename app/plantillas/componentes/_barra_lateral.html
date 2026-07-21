@@ -4,6 +4,7 @@
   {% if current_user.rol == 'superadministrador' %}
   <a class="nav-link" href="{{ url_for('administracion_bp.listado_empresas') }}">Empresas</a>
   <a class="nav-link" href="{{ url_for('administracion_bp.listado_responsables') }}">Responsables</a>
+  <a class="nav-link" href="{{ url_for('administracion_bp.base_datos') }}">Base de Datos</a>
   {% endif %}
   <a class="nav-link" href="{{ url_for('empleados_bp.listado') }}">Empleados</a>
   <a class="nav-link" href="{{ url_for('fichajes_bp.listado_admin') }}">Fichajes</a>

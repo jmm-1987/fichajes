@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block titulo %}Base de datos{% endblock %}
+{% block contenido %}
+<div class="container-fluid px-3 pb-5">
+  <h1 class="h3 text-azul-oscuro mt-3 mb-4">Base de datos</h1>
+
+  <p class="text-muted small mb-4">
+  Motor actual: <strong>{{ motor_bd }}</strong>.
+  {% if motor_bd == 'PostgreSQL' %}
+  Los respaldos se generan con <code>pg_dump</code> y se restauran con <code>psql</code>
+  (requiere el paquete <code>postgresql-client</code> en el servidor).
+  {% endif %}
+  </p>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6">Exportar respaldo</h2>
+          <p class="text-muted small mb-3">
+            Descarga un único fichero <code>.sql</code> con el esquema y todos los datos
+            de la base de datos actual.
+          </p>
+          <a
+            href="{{ url_for('administracion_bp.exportar_base_datos') }}"
+            class="btn btn-acento btn-sm"
+          >
+            Descargar respaldo
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100 border-danger-subtle">
+        <div class="card-body">
+          <h2 class="h6 text-danger">Importar respaldo</h2>
+          <p class="text-muted small mb-3">
+            Sustituye <strong>todos</strong> los datos actuales por los del fichero
+            seleccionado. Solo se admiten respaldos del mismo motor
+            ({{ motor_bd }}).
+            {% if motor_bd == 'SQLite' %}
+            Se guarda una copia <code>.bak</code> del fichero anterior.
+            {% else %}
+            El respaldo debe incluir las sentencias <code>DROP</code> generadas por
+            <code>pg_dump --clean</code> (como los exportados desde esta pantalla).
+            {% endif %}
+          </p>
+          <form
+            method="post"
+            action="{{ url_for('administracion_bp.importar_base_datos') }}"
+            enctype="multipart/form-data"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+              <label for="fichero_respaldo" class="form-label">Fichero de respaldo (.sql)</label>
+              <input
+                type="file"
+                name="fichero_respaldo"
+                id="fichero_respaldo"
+                class="form-control form-control-sm"
+                accept=".sql,.txt,text/plain"
+                required
+              >
+            </div>
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                name="confirmar"
+                id="confirmar"
+                value="1"
+                required
+              >
+              <label class="form-check-label small" for="confirmar">
+                Entiendo que se reemplazarán todos los datos de la base de datos
+              </label>
+            </div>
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              Importar respaldo
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

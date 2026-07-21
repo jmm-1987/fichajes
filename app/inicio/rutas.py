@@ -112,8 +112,8 @@ def panel():
     solo_hoy = request.args.get("solo_hoy", "0") == "1"
 
     if es_admin and rol != RolUsuario.EMPLEADO:
-        datos_admin = resumen_panel_administrador()
         empleados_cal = empleados_alcance_panel()
+        datos_admin = resumen_panel_administrador(empleados_cal)
         vista_equipo = request.args.get("vista_equipo", "dia")
         if vista_equipo not in ("dia", "semana", "mes"):
             vista_equipo = "dia"

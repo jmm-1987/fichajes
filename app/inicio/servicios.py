@@ -23,27 +23,40 @@ def inicio_dia_local() -> date:
     return hoy_calendario_en_zona(ZONA_MADRID)
 
 
-def contar_empleados_activos() -> int:
-    return Empleado.query.filter_by(activo=True).count()
+def contar_empleados_activos(empleado_ids: list[int] | None = None) -> int:
+    q = Empleado.query.filter_by(activo=True)
+    if empleado_ids is not None:
+        if not empleado_ids:
+            return 0
+        q = q.filter(Empleado.id.in_(empleado_ids))
+    return q.count()
 
 
-def contar_fichajes_hoy() -> int:
+def contar_fichajes_hoy(empleado_ids: list[int] | None = None) -> int:
     hoy = inicio_dia_local()
     inicio, fin = intervalo_utc_dia_en_zona(hoy, ZONA_MADRID)
-    return (
-        RegistroJornada.query.filter(
-            RegistroJornada.fecha_hora_servidor >= inicio,
-            RegistroJornada.fecha_hora_servidor < fin,
-            RegistroJornada.estado != EstadoRegistroJornada.ANULADO,
-        ).count()
+    q = RegistroJornada.query.filter(
+        RegistroJornada.fecha_hora_servidor >= inicio,
+        RegistroJornada.fecha_hora_servidor < fin,
+        RegistroJornada.estado != EstadoRegistroJornada.ANULADO,
     )
+    if empleado_ids is not None:
+        if not empleado_ids:
+            return 0
+        q = q.filter(RegistroJornada.empleado_id.in_(empleado_ids))
+    return q.count()
 
 
-def jornadas_incompletas_hoy_ids() -> list[int]:
+def jornadas_incompletas_hoy_ids(empleado_ids: list[int] | None = None) -> list[int]:
     """Empleados activos con entrada hoy pero sin salida (heurística simple)."""
     from app.fichajes.zona_trabajo import fecha_calendario_hoy_para_empleado, zona_trabajo_para_empleado
 
-    empleados = Empleado.query.filter_by(activo=True).all()
+    q = Empleado.query.filter_by(activo=True)
+    if empleado_ids is not None:
+        if not empleado_ids:
+            return []
+        q = q.filter(Empleado.id.in_(empleado_ids))
+    empleados = q.all()
     incompletos = []
     for emp in empleados:
         hoy_e = fecha_calendario_hoy_para_empleado(emp.id)
@@ -65,24 +78,35 @@ def jornadas_incompletas_hoy_ids() -> list[int]:
     return incompletos
 
 
-def solicitudes_correccion_pendientes() -> int:
-    return SolicitudCorreccion.query.filter_by(estado="pendiente").count()
+def solicitudes_correccion_pendientes(empleado_ids: list[int] | None = None) -> int:
+    q = SolicitudCorreccion.query.filter_by(estado="pendiente")
+    if empleado_ids is not None:
+        if not empleado_ids:
+            return 0
+        q = q.filter(SolicitudCorreccion.empleado_id.in_(empleado_ids))
+    return q.count()
 
 
-def vacaciones_pendientes_aprobar() -> int:
-    return SolicitudVacaciones.query.filter_by(
+def vacaciones_pendientes_aprobar(empleado_ids: list[int] | None = None) -> int:
+    q = SolicitudVacaciones.query.filter_by(
         estado=EstadoSolicitudVacaciones.PENDIENTE
-    ).count()
+    )
+    if empleado_ids is not None:
+        if not empleado_ids:
+            return 0
+        q = q.filter(SolicitudVacaciones.empleado_id.in_(empleado_ids))
+    return q.count()
 
 
-def resumen_panel_administrador() -> dict:
-    """Datos para tarjetas del dashboard RRHH/admin."""
+def resumen_panel_administrador(empleados: list[Empleado]) -> dict:
+    """Datos para tarjetas del dashboard RRHH/admin (alcance empresa/equipo)."""
+    ids = [e.id for e in empleados]
     return {
-        "empleados_activos": contar_empleados_activos(),
-        "fichajes_hoy": contar_fichajes_hoy(),
-        "jornadas_incompletas": len(jornadas_incompletas_hoy_ids()),
-        "incidencias_pendientes": solicitudes_correccion_pendientes(),
-        "vacaciones_pendientes": vacaciones_pendientes_aprobar(),
+        "empleados_activos": len(empleados),
+        "fichajes_hoy": contar_fichajes_hoy(ids),
+        "jornadas_incompletas": len(jornadas_incompletas_hoy_ids(ids)),
+        "incidencias_pendientes": solicitudes_correccion_pendientes(ids),
+        "vacaciones_pendientes": vacaciones_pendientes_aprobar(ids),
     }
 
 

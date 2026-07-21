@@ -3,7 +3,7 @@
 import secrets
 import string
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
@@ -15,6 +15,7 @@ from app.administracion.formularios import (
     FormularioParametrosLaborales,
     FormularioTiposEmpleado,
 )
+from app.administracion.respaldo_bd import ErrorRespaldoBd, exportar_bd, importar_bd, motor_bd
 from app.administracion.servicios import (
     activar_configuracion_nocturna,
     establecer_config,
@@ -443,6 +444,55 @@ def _generar_contrasena_temporal(longitud: int = 12) -> str:
             and any(c.isdigit() for c in pwd)
         ):
             return pwd
+
+
+@administracion_bp.route("/base-de-datos")
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def base_datos():
+    """Utilidades de respaldo e importación de la BD (solo superadmin)."""
+    return render_template("base_datos.html", motor_bd=motor_bd())
+
+
+@administracion_bp.route("/base-de-datos/exportar")
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def exportar_base_datos():
+    """Descarga un fichero SQL con el contenido completo de la BD."""
+    try:
+        contenido, nombre = exportar_bd()
+    except ErrorRespaldoBd as exc:
+        flash(str(exc), "peligro")
+        return redirect(url_for("administracion_bp.base_datos"))
+
+    resp = make_response(contenido)
+    resp.headers["Content-Type"] = "application/sql; charset=utf-8"
+    resp.headers["Content-Disposition"] = f'attachment; filename="{nombre}"'
+    return resp
+
+
+@administracion_bp.route("/base-de-datos/importar", methods=["POST"])
+@login_required
+@roles_permitidos(RolUsuario.SUPERADMINISTRADOR)
+def importar_base_datos():
+    """Restaura la BD desde un fichero SQL de respaldo."""
+    if not request.form.get("confirmar"):
+        flash("Debe confirmar que entiende las consecuencias de la importación.", "peligro")
+        return redirect(url_for("administracion_bp.base_datos"))
+
+    fichero = request.files.get("fichero_respaldo")
+    if not fichero or not fichero.filename:
+        flash("Seleccione un fichero de respaldo.", "peligro")
+        return redirect(url_for("administracion_bp.base_datos"))
+
+    try:
+        importar_bd(fichero.read())
+    except ErrorRespaldoBd as exc:
+        flash(str(exc), "peligro")
+        return redirect(url_for("administracion_bp.base_datos"))
+
+    flash("Base de datos importada correctamente.", "exito")
+    return redirect(url_for("administracion_bp.base_datos"))
 
 
 @administracion_bp.route("/responsables/<int:usuario_id>/reset-password", methods=["POST"])
