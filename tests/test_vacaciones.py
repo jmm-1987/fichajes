@@ -5,15 +5,23 @@ from datetime import date
 import pytest
 
 from app.extensiones import db
-from app.modelos import Empleado, SolicitudVacaciones, Usuario
+from app.modelos import Empleado, Empresa, SolicitudVacaciones, Usuario
 from app.constantes import EstadoSolicitudVacaciones
-from app.vacaciones.servicios import hay_solape, crear_solicitud
+from app.vacaciones.servicios import crear_solicitud, editar_solicitud, hay_solape
 
 
 @pytest.fixture
 def emp_v(aplicacion):
     with aplicacion.app_context():
-        u = Usuario(correo_electronico="vac@test.local", rol="empleado", activo=True)
+        empresa = Empresa(nombre="Empresa vacaciones", activa=True)
+        db.session.add(empresa)
+        db.session.flush()
+        u = Usuario(
+            correo_electronico="vac@test.local",
+            rol="empleado",
+            activo=True,
+            empresa_id=empresa.id,
+        )
         u.establecer_contrasena("x")
         db.session.add(u)
         db.session.flush()
@@ -27,6 +35,7 @@ def emp_v(aplicacion):
             vacaciones_anuales=22,
             saldo_vacaciones=22,
             activo=True,
+            empresa_id=empresa.id,
         )
         db.session.add(e)
         db.session.commit()
@@ -56,3 +65,31 @@ def test_crear_sin_solape(aplicacion, emp_v):
             None,
         )
         assert sol is not None
+
+
+def test_editar_solicitud_ajusta_saldo(aplicacion, emp_v):
+    with aplicacion.app_context():
+        sol = crear_solicitud(
+            emp_v,
+            date(2026, 9, 1),
+            date(2026, 9, 5),
+            "manual",
+            estado_inicial=EstadoSolicitudVacaciones.APROBADO,
+        )
+        emp = Empleado.query.get(emp_v)
+        emp.saldo_vacaciones = float(emp.saldo_vacaciones) - float(sol.numero_dias)
+        db.session.commit()
+        saldo_tras_alta = float(emp.saldo_vacaciones)
+
+        ok, msg = editar_solicitud(
+            sol.id,
+            date(2026, 9, 1),
+            date(2026, 9, 3),
+            EstadoSolicitudVacaciones.APROBADO,
+            "acortado",
+        )
+        assert ok, msg
+        emp = Empleado.query.get(emp_v)
+        sol = SolicitudVacaciones.query.get(sol.id)
+        assert float(sol.numero_dias) == 3.0
+        assert float(emp.saldo_vacaciones) == saldo_tras_alta + 2.0

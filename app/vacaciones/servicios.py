@@ -123,6 +123,110 @@ def rechazar_solicitud(solicitud_id: int, notas: str | None) -> tuple[bool, str]
     return True, "Rechazada."
 
 
+def _estado_consume_saldo(estado: str) -> bool:
+    """True si el estado implica días descontados del saldo del empleado."""
+    return estado in (
+        EstadoSolicitudVacaciones.APROBADO,
+        EstadoSolicitudVacaciones.DISFRUTADO,
+    )
+
+
+def editar_solicitud(
+    solicitud_id: int,
+    fecha_inicio: date,
+    fecha_fin: date,
+    estado: str,
+    notas: str | None,
+) -> tuple[bool, str]:
+    """
+    Edita fechas, estado y notas de una solicitud.
+    Ajusta el saldo de vacaciones si el cambio afecta días consumidos.
+    """
+    estados_validos = {
+        EstadoSolicitudVacaciones.PENDIENTE,
+        EstadoSolicitudVacaciones.APROBADO,
+        EstadoSolicitudVacaciones.RECHAZADO,
+        EstadoSolicitudVacaciones.DISFRUTADO,
+    }
+    if estado not in estados_validos:
+        return False, "Estado no válido."
+    if fecha_fin < fecha_inicio:
+        return False, "La fecha de fin no puede ser anterior a la de inicio."
+
+    sol = SolicitudVacaciones.query.get(solicitud_id)
+    if not sol:
+        return False, "Solicitud no encontrada."
+
+    emp = Empleado.query.get(sol.empleado_id)
+    if not emp:
+        return False, "Empleado no encontrado."
+
+    if hay_solape(sol.empleado_id, fecha_inicio, fecha_fin, excluir_id=sol.id):
+        return False, "Hay solape con otras vacaciones del empleado."
+
+    dias_nuevos = contar_dias_laborables(fecha_inicio, fecha_fin)
+    if dias_nuevos <= 0:
+        return False, "El periodo no es válido."
+
+    dias_antiguos = float(sol.numero_dias)
+    estado_antiguo = sol.estado
+    consumia = _estado_consume_saldo(estado_antiguo)
+    consumira = _estado_consume_saldo(estado)
+    saldo = float(emp.saldo_vacaciones)
+
+    if consumia and consumira:
+        delta = dias_antiguos - dias_nuevos
+        if saldo + delta < 0:
+            return False, "Saldo de vacaciones insuficiente para el nuevo periodo."
+        emp.saldo_vacaciones = Decimal(str(saldo + delta))
+    elif consumia and not consumira:
+        emp.saldo_vacaciones = Decimal(str(saldo + dias_antiguos))
+    elif not consumia and consumira:
+        if saldo < dias_nuevos:
+            return False, "Saldo de vacaciones insuficiente."
+        emp.saldo_vacaciones = Decimal(str(saldo - dias_nuevos))
+
+    estado_previo = {
+        "fecha_inicio": sol.fecha_inicio.isoformat(),
+        "fecha_fin": sol.fecha_fin.isoformat(),
+        "dias": dias_antiguos,
+        "estado": estado_antiguo,
+    }
+    sol.fecha_inicio = fecha_inicio
+    sol.fecha_fin = fecha_fin
+    sol.numero_dias = Decimal(str(dias_nuevos))
+    sol.estado = estado
+    sol.notas = notas
+
+    if consumira and not consumia:
+        if getattr(current_user, "is_authenticated", False):
+            sol.aprobado_por_usuario_id = current_user.id
+        from app.fichajes.validadores import ahora_servidor
+
+        sol.aprobado_en = ahora_servidor()
+
+    actor_id = None
+    if getattr(current_user, "is_authenticated", False):
+        actor_id = current_user.id
+
+    registrar_auditoria(
+        tipo_entidad="solicitud_vacaciones",
+        id_entidad=sol.id,
+        accion=TipoAccionAuditoria.ACTUALIZAR,
+        estado_anterior=estado_previo,
+        estado_nuevo={
+            "fecha_inicio": fecha_inicio.isoformat(),
+            "fecha_fin": fecha_fin.isoformat(),
+            "dias": dias_nuevos,
+            "estado": estado,
+        },
+        motivo="Edición administrativa de vacaciones",
+        usuario_actor_id=actor_id,
+    )
+    db.session.commit()
+    return True, "Vacaciones actualizadas."
+
+
 def marcar_disfrutadas_pasadas(fecha_referencia: date | None = None) -> int:
     """
     Pasa a disfrutado las aprobadas cuya fecha_fin < hoy.

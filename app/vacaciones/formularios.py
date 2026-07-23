@@ -51,3 +51,32 @@ class FormularioResolverVacaciones(FlaskForm):
     notas = TextAreaField("Notas", validators=[Optional()])
     aprobar = SubmitField("Aprobar")
     rechazar = SubmitField("Rechazar")
+
+
+class FormularioEditarVacaciones(FlaskForm):
+    """Edición administrativa de un periodo de vacaciones."""
+
+    fecha_inicio = DateField(
+        "Fecha inicio",
+        validators=[DataRequired()],
+        format=FORMATO_FECHA,
+        widget=EntradaFechaEspanola(),
+    )
+    fecha_fin = DateField(
+        "Fecha fin",
+        validators=[DataRequired()],
+        format=FORMATO_FECHA,
+        widget=EntradaFechaEspanola(),
+    )
+    estado = SelectField(
+        "Estado",
+        choices=[
+            ("pendiente", "Pendiente"),
+            ("aprobado", "Aprobado"),
+            ("rechazado", "Rechazado"),
+            ("disfrutado", "Disfrutado"),
+        ],
+        validators=[DataRequired()],
+    )
+    notas = TextAreaField("Notas", validators=[Optional()])
+    guardar = SubmitField("Guardar cambios")

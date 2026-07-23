@@ -122,12 +122,23 @@
         <div class="cal-dia {{ cls }}{% if c.editable and puede_editar_calendario %} cal-dia-clic{% endif %}"
              {% if c.editable and puede_editar_calendario %}
              role="button"
+             {% if c.solicitud_vacaciones_id %}
+             data-bs-toggle="modal"
+             data-bs-target="#modalEditarVacacionesDia"
+             data-solicitud-id="{{ c.solicitud_vacaciones_id }}"
+             data-fecha-iso="{{ c.fecha.isoformat() }}"
+             data-solicitud-inicio="{{ c.solicitud_inicio|fecha_es }}"
+             data-solicitud-fin="{{ c.solicitud_fin|fecha_es }}"
+             data-editar-url="{{ url_for('vacaciones_bp.editar', solicitud_id=c.solicitud_vacaciones_id, next=request.full_path) }}"
+             title="Editar vacaciones"
+             {% else %}
              data-bs-toggle="modal"
              data-bs-target="#modalClasificarDia"
              data-fecha-iso="{{ c.fecha.isoformat() }}"
              data-estado="{{ c.estado }}"
              data-motivo="{{ (c.motivo or '')|e }}"
              title="Clasificar día"
+             {% endif %}
              {% endif %}>
           <span class="cal-dia-num">{{ c.dia }}</span>
           {% if c.motivo and c.estado in ['libre','vacaciones','ausencia_justificada','ausencia_no_justificada'] %}
@@ -140,10 +151,35 @@
         {% endfor %}
       </div>
       {% if puede_editar_calendario %}
-      <p class="small text-muted mt-2 mb-0">Pulse un día laborable para marcar vacaciones, libre o ausencias (justificada / no justificada; motivo obligatorio). Los días con vacaciones aprobadas en el sistema no se editan aquí.</p>
+      <p class="small text-muted mt-2 mb-0">Pulse un día laborable para clasificarlo (vacaciones, libre o ausencias). Si el día ya forma parte de un periodo de vacaciones aprobado, podrá editar ese periodo.</p>
       {% endif %}
     </div>
   </div>
+
+  {% if puede_editar_calendario %}
+  <div class="modal fade" id="modalEditarVacacionesDia" tabindex="-1" aria-labelledby="modalEditarVacacionesDiaTitulo" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="modalEditarVacacionesDiaTitulo">Vacaciones del día</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small mb-2" id="vac_dia_fecha_txt"></p>
+          <p class="mb-0">
+            Este día pertenece al periodo
+            <strong id="vac_dia_periodo_txt"></strong>.
+            Puede editar fechas, estado y notas del periodo completo.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <a href="#" class="btn btn-acento" id="vac_dia_editar_enlace">Editar vacaciones</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   {% if puede_editar_calendario %}
   <div class="modal fade" id="modalClasificarDia" tabindex="-1" aria-labelledby="modalClasificarDiaTitulo" aria-hidden="true">
@@ -199,6 +235,19 @@
 {% block scripts_extra %}
 {% if puede_editar_calendario %}
 <script>
+document.getElementById('modalEditarVacacionesDia')?.addEventListener('show.bs.modal', function (ev) {
+  const el = ev.relatedTarget;
+  if (!el || !el.dataset) return;
+  const iso = el.dataset.fechaIso || '';
+  const d = iso ? new Date(iso + 'T12:00:00') : null;
+  const txt = d ? d.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  document.getElementById('vac_dia_fecha_txt').textContent = txt;
+  const ini = el.dataset.solicitudInicio || '';
+  const fin = el.dataset.solicitudFin || '';
+  document.getElementById('vac_dia_periodo_txt').textContent = ini && fin ? (ini + ' — ' + fin) : '—';
+  const enlace = document.getElementById('vac_dia_editar_enlace');
+  if (enlace) enlace.href = el.dataset.editarUrl || '#';
+});
 document.getElementById('modalClasificarDia')?.addEventListener('show.bs.modal', function (ev) {
   const el = ev.relatedTarget;
   if (!el || !el.dataset) return;

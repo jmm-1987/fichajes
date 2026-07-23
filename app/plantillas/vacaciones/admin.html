@@ -26,7 +26,11 @@
         <tr>
           <td>{{ s.empleado.nombre_completo }}</td>
           <td>{{ s.fecha_inicio|fecha_es }} — {{ s.fecha_fin|fecha_es }}</td>
-          <td><a href="{{ url_for('vacaciones_bp.resolver', solicitud_id=s.id) }}">Resolver</a></td>
+          <td>
+            <a href="{{ url_for('vacaciones_bp.resolver', solicitud_id=s.id) }}">Resolver</a>
+            ·
+            <a href="{{ url_for('vacaciones_bp.editar', solicitud_id=s.id) }}">Editar</a>
+          </td>
         </tr>
         {% else %}<tr><td colspan="3" class="text-muted">Ninguna pendiente</td></tr>{% endfor %}
       </tbody>
@@ -70,7 +74,9 @@
           <td>
             {% if s.estado == 'pendiente' %}
             <a href="{{ url_for('vacaciones_bp.resolver', solicitud_id=s.id) }}">Resolver</a>
-            {% else %}—{% endif %}
+            ·
+            {% endif %}
+            <a href="{{ url_for('vacaciones_bp.editar', solicitud_id=s.id) }}">Editar</a>
           </td>
         </tr>
         {% else %}

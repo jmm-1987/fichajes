@@ -16,6 +16,7 @@ from app.utilidades.predicados import (
     roles_permitidos,
 )
 from app.vacaciones.formularios import (
+    FormularioEditarVacaciones,
     FormularioResolverVacaciones,
     FormularioSolicitudVacaciones,
     FormularioVacacionesManual,
@@ -23,6 +24,7 @@ from app.vacaciones.formularios import (
 from app.vacaciones.servicios import (
     aprobar_solicitud,
     crear_solicitud,
+    editar_solicitud,
     marcar_disfrutadas_pasadas,
     rechazar_solicitud,
 )
@@ -235,4 +237,49 @@ def resolver(solicitud_id: int):
         "resolver.html",
         solicitud=sol,
         formulario=formulario,
+    )
+
+
+@vacaciones_bp.route("/admin/<int:solicitud_id>/editar", methods=["GET", "POST"])
+@login_required
+@roles_permitidos(
+    RolUsuario.SUPERADMINISTRADOR,
+    RolUsuario.ADMINISTRADOR_EMPRESA,
+    RolUsuario.RESPONSABLE,
+)
+def editar(solicitud_id: int):
+    """Permite a RRHH/responsable editar fechas, estado y notas de vacaciones."""
+    sol = SolicitudVacaciones.query.get_or_404(solicitud_id)
+    if not puede_gestionar_empleado(sol.empleado_id):
+        flash("Sin permiso.", "peligro")
+        return redirect(url_for("vacaciones_bp.listado_admin"))
+
+    destino = request.args.get("next") or request.form.get("next")
+    if not destino or not str(destino).startswith("/"):
+        destino = url_for("vacaciones_bp.listado_admin")
+
+    formulario = FormularioEditarVacaciones(obj=sol)
+    if request.method == "GET":
+        formulario.fecha_inicio.data = sol.fecha_inicio
+        formulario.fecha_fin.data = sol.fecha_fin
+        formulario.estado.data = sol.estado
+        formulario.notas.data = sol.notas
+
+    if formulario.validate_on_submit():
+        ok, msg = editar_solicitud(
+            solicitud_id,
+            formulario.fecha_inicio.data,
+            formulario.fecha_fin.data,
+            formulario.estado.data,
+            formulario.notas.data,
+        )
+        flash(msg, "exito" if ok else "peligro")
+        if ok:
+            return redirect(destino)
+
+    return render_template(
+        "editar.html",
+        solicitud=sol,
+        formulario=formulario,
+        next_url=destino,
     )

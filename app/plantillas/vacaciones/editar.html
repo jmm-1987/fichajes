@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block titulo %}Editar vacaciones{% endblock %}
+{% block contenido %}
+<div class="container py-3" style="max-width:520px">
+  <h1 class="h5 text-azul-oscuro mb-2">Editar vacaciones #{{ solicitud.id }}</h1>
+  <p class="small text-muted mb-3">
+    {{ solicitud.empleado.nombre_completo }}
+    · saldo actual: {{ solicitud.empleado.saldo_vacaciones }} días
+  </p>
+  <form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+      {{ formulario.hidden_tag() }}
+      {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+      <div class="row g-2">
+        <div class="col-md-6">
+          {{ formulario.fecha_inicio.label(class="form-label") }}
+          {{ formulario.fecha_inicio(class="form-control") }}
+        </div>
+        <div class="col-md-6">
+          {{ formulario.fecha_fin.label(class="form-label") }}
+          {{ formulario.fecha_fin(class="form-control") }}
+        </div>
+      </div>
+      <div class="mt-2">
+        {{ formulario.estado.label(class="form-label") }}
+        {{ formulario.estado(class="form-select") }}
+      </div>
+      <div class="mt-2">
+        {{ formulario.notas.label(class="form-label") }}
+        {{ formulario.notas(class="form-control", rows="3") }}
+      </div>
+      <p class="small text-muted mt-3 mb-0">
+        Si cambia fechas o estado de aprobado/disfrutado, el saldo de vacaciones
+        del empleado se ajusta automáticamente.
+      </p>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        {{ formulario.guardar(class="btn btn-acento") }}
+        <a href="{{ next_url or url_for('vacaciones_bp.listado_admin') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

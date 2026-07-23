@@ -15,18 +15,57 @@ from app.modelos import ClasificacionDiaLaboral, Empleado, SolicitudVacaciones
 
 
 def _dia_en_vacaciones_solicitud(empleado_id: int, d: date) -> bool:
-    q = SolicitudVacaciones.query.filter(
-        SolicitudVacaciones.empleado_id == empleado_id,
-        SolicitudVacaciones.estado.in_(
-            (
-                EstadoSolicitudVacaciones.APROBADO,
-                EstadoSolicitudVacaciones.DISFRUTADO,
-            )
-        ),
-        SolicitudVacaciones.fecha_inicio <= d,
-        SolicitudVacaciones.fecha_fin >= d,
+    return _solicitud_vacaciones_en_dia(empleado_id, d) is not None
+
+
+def _solicitud_vacaciones_en_dia(
+    empleado_id: int, d: date
+) -> SolicitudVacaciones | None:
+    return (
+        SolicitudVacaciones.query.filter(
+            SolicitudVacaciones.empleado_id == empleado_id,
+            SolicitudVacaciones.estado.in_(
+                (
+                    EstadoSolicitudVacaciones.APROBADO,
+                    EstadoSolicitudVacaciones.DISFRUTADO,
+                )
+            ),
+            SolicitudVacaciones.fecha_inicio <= d,
+            SolicitudVacaciones.fecha_fin >= d,
+        )
+        .order_by(SolicitudVacaciones.fecha_inicio.desc())
+        .first()
     )
-    return q.first() is not None
+
+
+def _mapa_solicitudes_vacaciones_mes(
+    empleado_id: int, desde: date, hasta: date
+) -> dict[date, SolicitudVacaciones]:
+    """Asocia cada día del rango a la solicitud de vacaciones que lo cubre (si hay)."""
+    filas = (
+        SolicitudVacaciones.query.filter(
+            SolicitudVacaciones.empleado_id == empleado_id,
+            SolicitudVacaciones.estado.in_(
+                (
+                    EstadoSolicitudVacaciones.APROBADO,
+                    EstadoSolicitudVacaciones.DISFRUTADO,
+                )
+            ),
+            SolicitudVacaciones.fecha_inicio <= hasta,
+            SolicitudVacaciones.fecha_fin >= desde,
+        )
+        .order_by(SolicitudVacaciones.fecha_inicio)
+        .all()
+    )
+    mapa: dict[date, SolicitudVacaciones] = {}
+    d = desde
+    while d <= hasta:
+        for sol in filas:
+            if sol.fecha_inicio <= d <= sol.fecha_fin:
+                mapa[d] = sol
+                break
+        d += timedelta(days=1)
+    return mapa
 
 
 def _mapa_clasificaciones_manual(empleado_id: int, desde: date, hasta: date) -> dict[date, ClasificacionDiaLaboral]:
@@ -143,6 +182,7 @@ def construir_calendario_mes(
     empresa_id = emp.empresa_id
 
     manual = _mapa_clasificaciones_manual(empleado_id, desde, hasta)
+    vacaciones_sol = _mapa_solicitudes_vacaciones_mes(empleado_id, desde, hasta)
 
     celdas: list[dict[str, Any]] = []
     contadores = {
@@ -157,6 +197,7 @@ def construir_calendario_mes(
     d = desde
     while d <= hasta:
         cls = manual.get(d)
+        sol_vac = vacaciones_sol.get(d)
         r = resolver_estado_dia_laboral(empleado_id, d, manual=cls)
         estado = r["estado"]
         laborable = r["laborable"]
@@ -177,11 +218,8 @@ def construir_calendario_mes(
             elif estado == "en_jornada":
                 contadores["en_jornada"] += 1
 
-        editable = bool(
-            puede_editar
-            and laborable
-            and not (laborable and _dia_en_vacaciones_solicitud(empleado_id, d))
-        )
+        # Laborables editables: clasificación manual o vacaciones por solicitud
+        editable = bool(puede_editar and laborable)
 
         estilo_nl = (
             tipo_apariencia_calendario_no_laborable(d, empresa_id)
@@ -199,6 +237,9 @@ def construir_calendario_mes(
                 "motivo": motivo,
                 "editable": editable,
                 "clasificacion_id": cls.id if cls else None,
+                "solicitud_vacaciones_id": sol_vac.id if sol_vac else None,
+                "solicitud_inicio": sol_vac.fecha_inicio if sol_vac else None,
+                "solicitud_fin": sol_vac.fecha_fin if sol_vac else None,
                 "estilo_no_laborable": estilo_nl,
             }
         )
