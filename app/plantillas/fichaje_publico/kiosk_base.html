@@ -41,7 +41,7 @@
     {% block contenido %}{% endblock %}
   </main>
   <footer class="kiosk-footer text-center">
-    <img src="{{ url_for('.logo') }}"
+    <img src="{{ url_for('.logo') }}?v={{ kiosk_logo_version }}"
          alt="{{ kiosk_logo_alt }}"
          class="kiosk-logo">
   </footer>

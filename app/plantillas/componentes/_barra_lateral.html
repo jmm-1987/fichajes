@@ -1,3 +1,4 @@
+<div class="d-flex flex-column flex-grow-1 min-vh-0">
 <nav class="nav flex-column gap-1 p-3">
   <a class="nav-link" href="{{ url_for('inicio_bp.panel') }}">Panel</a>
   {% if current_user.is_authenticated and current_user.rol in ['superadministrador','administrador_empresa','responsable'] %}
@@ -23,3 +24,11 @@
   <a class="nav-link" href="{{ url_for('empleados_bp.mi_ficha') }}">Mi ficha</a>
   {% endif %}
 </nav>
+{% if config.get('HABILITAR_FICHAJE_PUBLICO', True) %}
+<div class="mt-auto px-3 pb-4 pt-3 text-center">
+  <img src="{{ url_for('fichaje_publico_bp.logo') }}?v={{ request.host }}"
+       alt="{{ nombre_empresa_barra or config.get('KIOSK_LOGO_ALT', 'Empresa') }}"
+       class="logo-barra-lateral">
+</div>
+{% endif %}
+</div>

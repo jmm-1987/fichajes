@@ -35,6 +35,9 @@
 }
 
 .barra-superior {
+  position: sticky;
+  top: 0;
+  z-index: 1040;
   background: #ffffff;
   border-bottom: 2px solid #000000;
   color: var(--jm-negro);
@@ -58,6 +61,7 @@
 
 .contenedor-principal {
   min-height: calc(100vh - 52px);
+  align-items: flex-start;
 }
 
 /* El aside no debe encogerse cuando el contenido (p. ej. informes con tablas) es muy ancho */
@@ -67,7 +71,28 @@
   min-width: 240px;
   background: var(--jm-blanco);
   border-right: 1px solid var(--jm-borde);
-  min-height: calc(100vh - 52px);
+}
+
+@media (min-width: 992px) {
+  .barra-lateral {
+    position: sticky;
+    top: 52px;
+    align-self: flex-start;
+    height: calc(100vh - 52px);
+    max-height: calc(100vh - 52px);
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
+
+.logo-barra-lateral {
+  display: block;
+  margin: 0 auto;
+  max-width: 180px;
+  width: auto;
+  max-height: 80px;
+  height: auto;
 }
 
 .barra-lateral .nav-link {
