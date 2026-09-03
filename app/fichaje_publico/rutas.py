@@ -68,7 +68,7 @@ def crear_blueprint_kiosk(config: ConfigKiosk) -> Blueprint:
 
     @bp.context_processor
     def _ctx_kiosk():
-        return {"kiosk_logo_alt": config.logo_alt}
+        return {"kiosk_logo_alt": _logo_alt_kiosk(config)}
 
     def _empleado_sesion_kiosk():
         from app.modelos import Empleado
@@ -106,10 +106,10 @@ def crear_blueprint_kiosk(config: ConfigKiosk) -> Blueprint:
     @bp.route("/logo-alditraex.png")
     def logo():
         """Logo del terminal (compat. ruta antigua logo-alditraex.png)."""
-        ruta_logo = RAIZ_PROYECTO / config.logo_archivo
+        ruta_logo = RAIZ_PROYECTO / _logo_archivo_kiosk(config)
         if not ruta_logo.is_file():
-            abort(404, description=f"Logo no encontrado: {config.logo_archivo}")
-        return send_from_directory(RAIZ_PROYECTO, config.logo_archivo)
+            abort(404, description=f"Logo no encontrado: {ruta_logo.name}")
+        return send_from_directory(RAIZ_PROYECTO, ruta_logo.name)
 
     @bp.route("/manifest.webmanifest")
     def manifest():
@@ -295,6 +295,30 @@ def crear_blueprint_kiosk(config: ConfigKiosk) -> Blueprint:
         )
 
     return bp
+
+
+def _nombre_logo_seguro(nombre: str, fallback: str) -> str:
+    limpio = (nombre or "").strip() or fallback
+    if "/" in limpio or "\\" in limpio or ".." in limpio:
+        return fallback
+    return limpio
+
+
+def _logo_archivo_kiosk(config: ConfigKiosk) -> str:
+    """El kiosco /fichaje-publico admite logo por .env; el de SFM234R no se pisa."""
+    if config.nombre_bp == "fichaje_publico_bp":
+        return _nombre_logo_seguro(
+            current_app.config.get("KIOSK_LOGO_ARCHIVO"),
+            config.logo_archivo,
+        )
+    return config.logo_archivo
+
+
+def _logo_alt_kiosk(config: ConfigKiosk) -> str:
+    if config.nombre_bp == "fichaje_publico_bp":
+        alt = (current_app.config.get("KIOSK_LOGO_ALT") or "").strip()
+        return alt or config.logo_alt
+    return config.logo_alt
 
 
 fichaje_publico_bp = crear_blueprint_kiosk(

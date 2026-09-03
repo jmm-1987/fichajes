@@ -58,6 +58,13 @@ class Configuracion:
     HABILITAR_MODULO_PLANIFICACION = _get_bool("HABILITAR_MODULO_PLANIFICACION", True)
     # Terminal / lector de códigos sin sesión (ruta /fichaje-publico/)
     HABILITAR_FICHAJE_PUBLICO = _get_bool("HABILITAR_FICHAJE_PUBLICO", True)
+    # Logo del kiosco /fichaje-publico y de la pantalla de login.
+    # En la instancia SFM: KIOSK_LOGO_ARCHIVO=logosfm.png y KIOSK_LOGO_ALT=SFM
+    KIOSK_LOGO_ARCHIVO = (
+        os.getenv("KIOSK_LOGO_ARCHIVO", "logoalditraex.png").strip()
+        or "logoalditraex.png"
+    )
+    KIOSK_LOGO_ALT = os.getenv("KIOSK_LOGO_ALT", "Alditraex").strip() or "Alditraex"
     HABILITAR_BLOQUEO_INTENTOS = _get_bool("HABILITAR_BLOQUEO_INTENTOS", True)
     MAX_INTENTOS_LOGIN = _get_int("MAX_INTENTOS_LOGIN", 5)
     MINUTOS_BLOQUEO_LOGIN = _get_int("MINUTOS_BLOQUEO_LOGIN", 15)

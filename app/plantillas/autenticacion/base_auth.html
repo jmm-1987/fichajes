@@ -9,6 +9,13 @@
 </head>
 <body class="cuerpo-auth d-flex align-items-center justify-content-center min-vh-100">
   <div class="w-100" style="max-width:420px">
+    {% if config.get('HABILITAR_FICHAJE_PUBLICO', True) %}
+    <div class="text-center mb-3 px-3">
+      <img src="{{ url_for('fichaje_publico_bp.logo') }}"
+           alt="{{ config.get('KIOSK_LOGO_ALT', 'Empresa') }}"
+           style="max-width:min(240px,80vw);height:auto;">
+    </div>
+    {% endif %}
     {% include 'componentes/_mensajes.html' %}
     {% block contenido %}{% endblock %}
   </div>
